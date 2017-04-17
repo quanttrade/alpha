@@ -206,27 +206,20 @@ def alpha_group_return(alpha_list, pctchange, group_num, period, func):
 
 
 def alpha_real_return(alpha_list, func, close, volume, group_num, num, fee, period):
-	group_backtest_list = []
+	group_backtest_dic = dict()
 	max_index = close.index[0]
 
 	for alpha in alpha_list:
 		returns = group_backtest(alpha, close, volume, group_num, num, fee, period)
-		group_backtest_list.append(returns)
-		if returns.index[0] > max_index:
-			max_index = returns.index[0]
-
-	for i in range(len(group_backtest_list)):
-		group_backtest_list[i] = group_backtest_list[i].ix[max_index:]
-
-	df = pd.DataFrame(group_backtest_list).T
-	df.columns = func
-	return df
+		group_backtest_list[alpha]= returns
+		
+	return group_backtest_dic
 
 
 def alpha_year_return(real_return_df, benchmark_return, func):
 	alpha_excess_return = dict()
 
-	for alpha in real_return_df.columns:
+	for alpha in real_return_df.keys():
 		year_return = returns_sta(real_return_df[alpha])
 		excess_return = year_return - benchmark_return
 		alpha_excess_return[alpha] = excess_return
@@ -247,6 +240,22 @@ def alpha_tvalue_rsquare(alpha_list, pctchange, period, func):
 	tvalues.columns = func
 	rsquare.columns = func
 	return tvalues,rsquare
+
+
+def obvious(tvalues):
+	total_ratio_list = []
+	compare_ratio_list = []
+
+	for alpha in tvalues.columns:
+		total_ratio, compare_ratio = tvalue_sta(tvalues[alpha])
+		total_ratio_list.append(total_ratio)
+		compare_ratio_list.append(compare_ratio)
+
+	return pd.DataFrame({'total_ratio':total_ratio_list,'compare_ratio':compare_ratio_list}, index=tvalues.columns)
+
+
+
+
 
 
 
