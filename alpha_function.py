@@ -199,7 +199,9 @@ def alpha_group_return(alpha_list, pctchange, group_num, period, func):
 		returns_list.append(returns)
 
 	index = map(lambda x: 'group'+str(x), range(1,period + 1))
-	returns_df = pd.DataFrame(returns_list, columns = func, index = index)
+	returns_df = pd.DataFrame(returns_list).T
+	returns_df.index = index
+	returns.columns = func
 	return returns_df
 
 
@@ -216,7 +218,8 @@ def alpha_real_return(alpha_list, func, close, volume, group_num, num, fee, peri
 	for i in range(len(group_backtest_list)):
 		group_backtest_list[i] = group_backtest_list[i].ix[max_index:]
 
-	df = pd.DataFrame(group_backtest_list, columns = func)
+	df = pd.DataFrame(group_backtest_list).T
+	df.columns = func
 	return df
 
 
@@ -228,7 +231,9 @@ def alpha_year_return(real_return_df, benchmark_return, func):
 		excess_return = year_return - benchmark_return
 		alpha_excess_return[alpha] = excess_return
 
-	return pd.DataFrame(alpha_excess_return, columns = func)
+	df = pd.DataFrame(alpha_excess_return).T
+	df.columns = func
+	return df
 
 
 def alpha_tvalue_rsquare(alpha_list, pctchange, period, func):
@@ -238,7 +243,10 @@ def alpha_tvalue_rsquare(alpha_list, pctchange, period, func):
 		df = t_value(alpha, pctchange, period)
 		tvalues.append(df.tvalues)
 		rsquare.append(df.rsquare)
-	return pd.DataFrame(tvalues, columns=func), pd.DataFrame(rsquare, columns=func)
+	tvalues,rsquare =  pd.DataFrame(tvalues).T, pd.DataFrame(rsquare).T
+	tvalues.columns = func
+	rsquare.columns = func
+	return tvalues,rsquare
 
 
 
