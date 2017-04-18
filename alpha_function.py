@@ -207,11 +207,10 @@ def alpha_group_return(alpha_list, pctchange, group_num, period, func):
 
 def alpha_real_return(alpha_list, func, close, volume, group_num, num, fee, period):
 	group_backtest_dic = dict()
-	max_index = close.index[0]
-
+	
 	for alpha in alpha_list:
 		returns = group_backtest(alpha, close, volume, group_num, num, fee, period)
-		group_backtest_list[alpha]= returns
+		group_backtest_dic[alpha]= returns
 		
 	return group_backtest_dic
 
