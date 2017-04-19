@@ -6,6 +6,14 @@ import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 
+def load_data(path):
+    adjClose = pd.read_csv(path+ '\\' + 'adjClose.csv',index_col=0)
+    adjHigh = pd.read_csv(path+ '\\' + 'adjHigh.csv',index_col=0)
+    adjLow = pd.read_csv(path+ '\\' + 'adjLow.csv',index_col=0)
+    adjOpen = pd.read_csv(path+ '\\' + 'adjOpen.csv',index_col=0)
+    volume = pd.read_csv(path+ '\\' + 'volume.csv',index_col=0)
+    pn_data={'adjOpen' :adjOpen,'adjHigh': adjHigh,'adjLow': adjLow,'adjClose': adjClose,'volume':volume}
+    return pn_data
 
 
 def winsorize_series(se):
