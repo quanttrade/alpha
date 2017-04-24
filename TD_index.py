@@ -11,7 +11,7 @@ def TD_index(high, low):
     the td_index by guangfa
     """
 
-    k,m,p = 2,6,5
+    k,m,p = 1,5,3
     # tmodel's paramaters set to be as the begining
     length = len(high)
     X = []    # initialize the the daily momentum
@@ -49,7 +49,7 @@ def trade_TD_index(TD, close, limit):
             cash = 0
 
         netvalue.append(cash + p * close.ix[date])
-    df = pd.DataFrame({'TD_varing' : netvalue, ' benchmark':  close.ix[TD.index[0]:].values}, index=TD_index)
+    df = pd.DataFrame({'TD_varing' : netvalue, ' benchmark':  close.ix[TD.index[0]:].values}, index=TD.index)
     return df / df.iloc[0]
 
 
