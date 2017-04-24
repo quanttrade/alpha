@@ -49,7 +49,7 @@ def trade_TD_index(TD, close, limit):
             cash = 0
 
         netvalue.append(cash + p * close.ix[date])
-    df = pd.DataFrame({'TD_varing' : netvalue, ' benchmark':  close.ix[TD.index[0]:]})
+    df = pd.DataFrame({'TD_varing' : netvalue, ' benchmark':  close.ix[TD.index[0]:].values}, index=TD_index)
     return df / df.iloc[0]
 
 
