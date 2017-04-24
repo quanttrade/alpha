@@ -1,7 +1,13 @@
 import pandas as pd
+import  tushare as ts
 
+def load_index_data(code, start, end):
+    #load the index data
+    df = ts.get_k_data(code, start, end)
+    df = df.set_index('date')
+    return df
 
-def TD_index(high, low):
+def TD_index(high, low, m, k, p):
     """
     paramas:
     high : high price of  day
@@ -11,7 +17,7 @@ def TD_index(high, low):
     the td_index by guangfa
     """
 
-    k,m,p = 1,5,3
+    #k,m,p = 1,5,3
     # tmodel's paramaters set to be as the begining
     length = len(high)
     X = []    # initialize the the daily momentum
@@ -30,7 +36,7 @@ def TD_index(high, low):
     
     # TD_index_i = (sum_j=0^p X(i-j)/ (hi^p - li^p)) *100
     momentum_sum = df.momentum.rolling(p).sum().dropna()
-    standedlizer =  pd.Series([high[i - p : i].max() - low[i -p : i].min() for i in range(p , df.shape[0])], index=df.index[p:])
+    standedlizer =  pd.Series([df.high[i - p : i].max() - df.low[i -p : i].min() for i in range(p , df.shape[0])], index=df.index[p:])
     return momentum_sum / standedlizer * 100
 
 
@@ -46,14 +52,14 @@ def trade_TD_index(TD, close, limit, fee):
             cash += p * close.ix[date] * (1-fee)
             p = 0
             price.append(close.ix[date])
-            type_.append("sell")
+            type_.append(2) 
             trade_date.append(date)
 
         if TD.ix[date] > limit and cash > 0:
             p += cash / close.ix[date] * (1-fee)
             cash = 0
             price.append(close.ix[date])
-            type_.append("buy")
+            type_.append(1)
             trade_date.append(date)
 
         netvalue.append(cash + p * close.ix[date])
@@ -61,8 +67,12 @@ def trade_TD_index(TD, close, limit, fee):
     return df / df.iloc[0] , pd.DataFrame({'price': price, 'type' : type_},index=trade_date)
 
 
-def trade_sta(order_list):
-    pass
+def TD_test(code, start, end, m, k , p, limit, fee):
+    data = load_index_data(code, start, end)
+    TD = TD_index(data.high, data.low, m, k, p)
+    return trade_TD_index(TD, data.close, limit, fee)
+    
+
 
 
 
