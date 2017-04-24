@@ -42,14 +42,14 @@ def trade_TD_index(TD, close, limit, fee):
     type_ = []
     trade_date = []
     for date in TD.index :
-        if TD.ix[date] < -1 * limit:
+        if TD.ix[date] < -1 * limit and p > 0:
             cash += p * close.ix[date] * (1-fee)
             p = 0
             price.append(close.ix[date])
             type_.append("sell")
             trade_date.append(date)
 
-        if TD.ix[date] > limit:
+        if TD.ix[date] > limit and cash > 0:
             p += cash / close.ix[date] * (1-fee)
             cash = 0
             price.append(close.ix[date])
