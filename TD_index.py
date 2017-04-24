@@ -34,5 +34,28 @@ def TD_index(high, low):
     return momentum_sum / standedlizer * 100
 
 
+def trade_TD_index(TD, close, limit):
+    cash = 1.0
+    p = 0
+    fee = 0.0015
+    netvalue = []
+    for date in TD.index :
+        if TD.ix[date] < -1 * limit:
+            cash += p * close.ix[date] * (1-fee)
+            p = 0
+
+        if TD.ix[date] > limit:
+            p += cash / close.ix[date] * (1-fee)
+            cash = 0
+
+        netvalue.append(cash + p * close.ix[date])
+    df = pd.DataFrame({'TD_varing' : netvalue, ' benchmark':  close.ix[TD.index[0]:]})
+    return df / df.iloc[0]
+
+
+
+
+
+
 
 
