@@ -39,23 +39,26 @@ def trade_TD_index(TD, close, limit, fee):
     p = 0
     netvalue = []
     price = []
-    type = []
+    type_ = []
+    trade_date = []
     for date in TD.index :
         if TD.ix[date] < -1 * limit:
             cash += p * close.ix[date] * (1-fee)
             p = 0
             price.append(close.ix[date])
-            type.append("sell")
+            type_.append("sell")
+            trade_date.append(date)
 
         if TD.ix[date] > limit:
             p += cash / close.ix[date] * (1-fee)
             cash = 0
             price.append(close.ix[date])
-            type.append("buy")
+            type_.append("buy")
+            trade_date.append(date)
 
         netvalue.append(cash + p * close.ix[date])
     df = pd.DataFrame({'TD_varing' : netvalue, ' benchmark':  close.ix[TD.index[0]:].values}, index=TD.index)
-    return df / df.iloc[0] , pd.DataFrame({'price': price, 'type' : type})
+    return df / df.iloc[0] , pd.DataFrame({'price': price, 'type' : type_},index=trade_date)
 
 
 def trade_sta(order_list):
