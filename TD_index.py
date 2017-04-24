@@ -31,7 +31,7 @@ def TD_index(high, low):
     # TD_index_i = (sum_j=0^p X(i-j)/ (hi^p - li^p)) *100
     momentum_sum = df.momentum.rolling(p).sum().dropna()
     standedlizer =  pd.Series([high[i - p : i].max() - low[i -p : i].min() for i in range(p , df.shape[0])], index=df.index[p:])
-    return momentum_sum / standedlizer
+    return momentum_sum / standedlizer * 100
 
 
 
