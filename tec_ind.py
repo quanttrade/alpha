@@ -1,6 +1,44 @@
 import talib as ta
 import tushare as ts
 import pandas as pd
+import numpy as np
+
+
+def TD_index(high, low, m=5, k=1, p=3):
+    """
+    paramas:
+    high : high price of  day
+    low: low price of day
+
+    returns:
+    the td_index by guangfa
+    """
+
+    #k,m,p = 1,5,3
+    # tmodel's paramaters set to be as the begining
+    length = len(high)
+    X = []    # initialize the the daily momentum
+    for i in range(m):
+        X.append(np.nan)
+
+    # X_i = (hi - hi^k) + (li -li^k)  if hi >= li^m and li <=  hi^m else X_i = 0
+    for i in range(m, length):
+        if high[i] >= low[i - m : i].min()  and low[i] <= high[i - m : i].max():
+            X_i = (high[i] - high[i - k:  i].max()) + (low[i] - low[i - k : i].min()) 
+
+        else:
+            X_i = 0
+
+        X.append(X_i)
+
+    df = pd.DataFrame({'high': high, 'low':low, 'momentum':X})
+    
+    # TD_index_i = (sum_j=0^p X(i-j)/ (hi^p - li^p)) *100
+    momentum_sum = df.momentum.rolling(p).sum()
+    standedlizer =  pd.Series([df.high[i - p : i].max() - df.low[i -p : i].min() for i in range(df.shape[0])])
+    return (momentum_sum / standedlizer * 100).values
+
+
 
 
 class technical_Analysis:
@@ -13,6 +51,7 @@ class technical_Analysis:
         self.volume = data.volume.values
         self.pct_chg = self.data.close.pct_change()
         self.situation = pd.DataFrame()
+        self.situation_pct = pd.DataFrame()
 
     def technical_caculate(self):
         data = self.data
@@ -43,6 +82,9 @@ class technical_Analysis:
 
         CMO = ta.CMO(self.close)
         data['CMO'] = CMO
+
+        MOM = ta.MOM(self.close)
+        data['MOM'] = MOM
 
         CCI = ta.CCI(self.high, self.low, self.close)
         data['CCI'] = CCI
@@ -75,12 +117,17 @@ class technical_Analysis:
         data['PLUS_DI'] = PLUS_DI
         data['MINUS_DI'] = MINUS_DI
 
+        data['TD'] =  TD_index(self.high, self.low)
+
+        data['VRSI'] = ta.RSI(self.volume, timeperiod = 6)
+
+
         self.data = data
 
     def technical_situation(self):
         data = self.data.dropna()
         situation = pd.DataFrame(index=data.index, columns=[
-                                 'AROON', 'Kel', 'EMA', 'BOLL', 'CMO', 'SAR', 'MFI', 'RSI', 'MACD', 'TRIX', 'KD', 'DI', 'CCI', 'SAR'])
+                                 'AROON', 'Kel', 'EMA', 'BOLL', 'CMO', 'SAR', 'MFI', 'RSI', 'MACD', 'TRIX', 'KD', 'DI', 'CCI', 'MOM', 'TD', 'VRSI'])
         situation['AROON'].ix[data.AROON > 0] = 1
         situation['AROON'].ix[data.AROON < 0] = -1
         situation['Kel'].ix[data.close - data.KeltnerLow < 0] = -1
@@ -107,7 +154,14 @@ class technical_Analysis:
         situation['CCI'].ix[data.CCI > 100] = -1
         situation['SAR'].ix[data.close - data.SAR > 0] = 1
         situation['SAR'].ix[data.close - data.SAR < 0] = -1
+        situation['MOM'] .ix[data.MOM > 0] = 1
+        situation['MOM'].ix[data.MOM < 0] = -1
+        situation['TD'].ix[data.TD > 150] = 1
+        situation['TD'].ix[data.TD < -150] = -1 
+        situation['VRSI'].ix[data.VRSI > 85] = 1
+        situation['VRSI'].ix[data.VRSI < 15] = -1
         situation = situation.fillna(0)
+        self.situation = situation.copy()[1:]
         after_index = situation.index[1:]
         situation = situation[:-1]
         situation.index = after_index
@@ -115,11 +169,59 @@ class technical_Analysis:
             lambda x: x[x == -1].shape[0], axis=1)
         situation['plus'] = situation.apply(
             lambda x: x[x == 1].shape[0], axis=1)
-        self.situation = situation
+        self.situation_pct = situation
+
 
 
 def st(df):
     return df / df.iloc[0]
+
+
+def return_sta(df):
+    df = df.pct_change()
+    grouped = df.groupby(lambda x: x.split('-')[0])
+    return grouped.apply(lambda x: (1+x).prod() - 1)
+
+
+def trade_indicator(ind, close):
+    cash = 1.0
+    p = 0
+    netvalue = []
+    buyprice = []
+    sellprice = []
+    buy_date = []
+    sell_date = []
+    for i in range(ind.shape[0]):
+        date = ind.index[i]
+        price = close.ix[date]
+        if ind.ix[date] > 0 and cash > 0:
+            p += cash / price
+            cash = 0
+            buyprice.append(price)
+            buy_date.append(date)
+
+        if ind.ix[date] < 0 and p > 0:
+            cash += p * price
+            p = 0
+            sellprice.append(price)
+            sell_date.append(date)
+
+        netvalue.append(cash + price * p)
+
+    df = pd.DataFrame({'netvalue' : netvalue, ' benchmark':  close.ix[ind.index[0]:].values}, index=ind.index)  
+
+    if len(buyprice) > len(sellprice):
+        buyprice = buyprice[ : -len(buyprice) + len(sellprice)]
+        buy_date = buy_date[ :  -len(buy_date) + len(sell_date)]
+                  #if there is one more buy action, delete it.
+    trade_action = pd.DataFrame({'buyprice':buyprice, 'sellprice':sellprice, 'buydate':buy_date, 'selldate':sell_date})
+    trade_action['returns'] = trade_action.sellprice / trade_action.buyprice -1
+    return df / df.iloc[0] , trade_action
+
+
+
+
+    
 
 
 hs = ts.get_k_data('hs300', '2004-01-01', '2017-05-02')
@@ -128,7 +230,7 @@ hs300 = hs.copy()
 tt = technical_Analysis(hs300)
 tt.technical_caculate()
 tt.technical_situation()
-mp = tt.situation.ix[:, -2:]
+mp = tt.situation_pct.ix[:, -2:]
 cha = mp.plus - mp.minus
 pctchange = hs.close.pct_change()
 returns = pd.DataFrame({'fuhao': cha, 'pct_chg': pctchange.ix[cha.index]})
@@ -137,6 +239,8 @@ returns_dk = returns.apply(lambda x: x.pct_chg if x[
 returns_d = returns.apply(lambda x: x.pct_chg if x[0] > 1 else 0, axis=1)
 net_dk = (1 + returns_dk).cumprod()
 net_d = (1 + returns_d).cumprod()
+
+net = pd.DataFrame({'net_d':net_d, 'net_dk':net_dk,'benchmark':st(hs.close.ix[net_dk.index])})
 net_dk = pd.DataFrame(
     {'strategy': net_dk, 'benchmark': st(hs.close.ix[net_dk.index])})
 net_d = pd.DataFrame(
