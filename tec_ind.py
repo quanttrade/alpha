@@ -2,6 +2,7 @@ import talib as ta
 import tushare as ts
 import pandas as pd
 import numpy as np
+import itertools
 
 
 def TD_index(high, low, m=5, k=1, p=3):
@@ -40,6 +41,32 @@ def TD_index(high, low, m=5, k=1, p=3):
 
 
 
+def emv(high, low, volume, N=14):
+    a = (high + low) / 2
+    b = []
+    b.append(np.nan)
+    b.extend(list(a[:-1]))
+    b = np.array(b)
+    c = high - low
+    em = (a - b) * c / volume
+    em = pd.Series(em)
+    return em.rolling(N).mean().values
+
+
+
+def psy(pctchange, N=12):
+    pct_chg = pd.Series(pctchange)
+    return pct_chg.rolling(N).apply(lambda x: x[x > 0].shape[0] / (x.shape[0] + 0.0) * 100).values
+
+
+def tapi(pctchange, volume, N=24):
+    data = pd.DataFrame({'pct_chg':pctchange, 'volume':volume})
+    pass
+
+
+
+
+
 
 class technical_Analysis:
     def __init__(self, data):
@@ -71,8 +98,11 @@ class technical_Analysis:
 
         ema_5 = ta.EMA(self.close, timeperiod=5)
         ema_12 = ta.EMA(self.close, timeperiod=12)
+        ema_60 = ta.EMA(self.close, timeperiod = 60)
         data['EMA5'] = ema_5
         data['EMA12'] = ema_12
+        data['EMA60'] = ema_60
+
 
         upperband, middleband, lowerband = ta.BBANDS(
             self.close, timeperiod=20)  # Bolling Bands
@@ -121,13 +151,17 @@ class technical_Analysis:
 
         data['VRSI'] = ta.RSI(self.volume, timeperiod = 6)
 
+        data['EMV'] = emv(self.high, self.low, self.volume)
+
+        data['PSY'] = psy(self.pct_chg)
+
 
         self.data = data
 
     def technical_situation(self):
         data = self.data.dropna()
         situation = pd.DataFrame(index=data.index, columns=[
-                                 'AROON', 'Kel', 'EMA', 'BOLL', 'CMO', 'SAR', 'MFI', 'RSI', 'MACD', 'TRIX', 'KD', 'DI', 'CCI', 'MOM', 'TD', 'VRSI'])
+                                 'AROON', 'Kel', 'EMA', 'BOLL', 'CMO', 'SAR', 'MFI', 'RSI', 'MACD', 'TRIX', 'KD', 'DI', 'CCI', 'MOM', 'TD', 'VRSI', 'EMV', 'PSY'])
         situation['AROON'].ix[data.AROON > 0] = 1
         situation['AROON'].ix[data.AROON < 0] = -1
         situation['Kel'].ix[data.close - data.KeltnerLow < 0] = -1
@@ -160,6 +194,11 @@ class technical_Analysis:
         situation['TD'].ix[data.TD < -150] = -1 
         situation['VRSI'].ix[data.VRSI > 85] = 1
         situation['VRSI'].ix[data.VRSI < 15] = -1
+        situation['EMV'].ix[data.EMV > 0 ] = 1
+        situation['EMV'].ix[data.EMV < 0 ] = -1
+        situation['PSY'].ix[data.PSY > 80] = -1
+        situation['PSY'].ix[data.PSY < 20] = 1
+
         situation = situation.fillna(0)
         self.situation = situation.copy()[1:]
         after_index = situation.index[1:]
@@ -217,6 +256,38 @@ def trade_indicator(ind, close):
     trade_action = pd.DataFrame({'buyprice':buyprice, 'sellprice':sellprice, 'buydate':buy_date, 'selldate':sell_date})
     trade_action['returns'] = trade_action.sellprice / trade_action.buyprice -1
     return df / df.iloc[0] , trade_action
+
+
+
+def enum_ret(situation, num, pctchange, start, end):
+    N = len(situation.columns)
+    value = 0
+    choose_res = []
+    result = list(itertools.permutations(range(N), num))
+    for columns in result:
+        df = situation.ix[: , columns].ix[start : end].copy()
+        returns = caculate(df, pctchange)
+        if returns > value:
+            value = returns
+            choose_res = columns
+    return value,choose_res
+
+
+
+
+def caculate(situation, pctchange):
+    df = situation.sum(axis=1)
+    return (pctchange.ix[df[df>0].index] + 1).prod()
+
+
+
+
+
+
+
+
+
+
 
 
 
