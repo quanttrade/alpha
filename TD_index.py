@@ -44,34 +44,41 @@ def trade_TD_index(TD, close, limit, fee):
     cash = 1.0
     p = 0
     netvalue = []
-    price = []
-    type_ = []
-    trade_date = []
+    buyprice = []
+    sellprice = []
+    buy_date = []
+    sell_date = []
     for date in TD.index :
         if TD.ix[date] < -1 * limit and p > 0:
             cash += p * close.ix[date] * (1-fee)
             p = 0
-            price.append(close.ix[date])
-            type_.append(2) 
-            trade_date.append(date)
+            sellprice.append(close.ix[date])
+            sell_date.append(date)
 
         if TD.ix[date] > limit and cash > 0:
             p += cash / close.ix[date] * (1-fee)
             cash = 0
-            price.append(close.ix[date])
-            type_.append(1)
-            trade_date.append(date)
+            buyprice.append(close.ix[date])
+            buy_date.append(date)
 
         netvalue.append(cash + p * close.ix[date])
-    df = pd.DataFrame({'TD_varing' : netvalue, ' benchmark':  close.ix[TD.index[0]:].values}, index=TD.index)
-    return df / df.iloc[0] , pd.DataFrame({'price': price, 'type' : type_},index=trade_date)
+    df = pd.DataFrame({'TD_varing' : netvalue, ' benchmark':  close.ix[TD.index[0]:].values}, index=TD.index)  
+
+    if len(buyprice) > len(sellprice):
+        buyprice = buyprice[1:]          #if there is one more buy action, delete it.
+    trade_action = pd.DataFrame({'buyprice':buyprice, 'sellprice':sellprice, 'buydate':buy_date, 'selldate':sell_date})
+    trade_action['returns'] = trade_action.sellprice / trade_action.buyprice -1
+    return df / df.iloc[0] , trade_action
 
 
 def TD_test(code, start, end, m, k , p, limit, fee):
     data = load_index_data(code, start, end)
     TD = TD_index(data.high, data.low, m, k, p)
     return trade_TD_index(TD, data.close, limit, fee)
+
+
     
+
 
 
 
