@@ -7,11 +7,11 @@ import numpy as np
 import statsmodels.api as sm
 
 def load_data(path):
-    adjClose = pd.read_csv(path+ '\\' + 'adjClose.csv',index_col=0)
-    adjHigh = pd.read_csv(path+ '\\' + 'adjHigh.csv',index_col=0)
-    adjLow = pd.read_csv(path+ '\\' + 'adjLow.csv',index_col=0)
-    adjOpen = pd.read_csv(path+ '\\' + 'adjOpen.csv',index_col=0)
-    volume = pd.read_csv(path+ '\\' + 'volume.csv',index_col=0)
+    adjClose = pd.read_csv(path+ '/' + 'adjClose.csv',index_col=0)
+    adjHigh = pd.read_csv(path+ '/' + 'adjHigh.csv',index_col=0)
+    adjLow = pd.read_csv(path+ '/' + 'adjLow.csv',index_col=0)
+    adjOpen = pd.read_csv(path+ '/' + 'adjOpen.csv',index_col=0)
+    volume = pd.read_csv(path+ '/' + 'volume.csv',index_col=0)
     pn_data={'adjOpen' :adjOpen,'adjHigh': adjHigh,'adjLow': adjLow,'adjClose': adjClose,'volume':volume}
     return pn_data
 
@@ -26,6 +26,29 @@ def winsorize_series(se):
 
 def winsorize(factor):
     return factor.apply(winsorize_series, axis=1)
+
+
+
+def adj_boxplot(factor_data):
+    for i in factor_data.index:
+        temp = factor_data.ix[i,:]
+        x = list(temp.dropna())
+        if len(x) > 0:
+            mc = sm.stats.stattools.medcouple(x)
+            x.sort()
+            q1 = x[int(0.25*len(x))]
+            q3 = x[int(0.75*len(x))]
+            iqr = q3-q1
+            if mc >= 0:
+                l = q1-1.5*np.exp(-3.5*mc)*iqr
+                u = q3+1.5*np.exp(4*mc)*iqr
+            else:
+                l = q1-1.5*np.exp(-4*mc)*iqr
+                u = q3+1.5*np.exp(3.5*mc)*iqr
+            temp[temp < l] = l
+            temp[temp > u] = u
+            factor_data.ix[i,:] = (temp-temp.mean())/temp.std()
+    return factor_data
 
 
 def standarlize(factor):

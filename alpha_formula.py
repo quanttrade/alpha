@@ -66,7 +66,7 @@ def delay(df, period=1):
 
 
 def rank(df):
-    return df.rank()
+    return df.rank(axis=1, pct=True)
 
 
 def scale(df, k=1):
