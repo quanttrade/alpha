@@ -28,7 +28,7 @@ def TD_index(high, low, m, k, p):
             X_i = (high.iloc[i] - high[i - k:  i].max()) + (low.iloc[i] - low[i - k : i].min()) 
 
         else:
-            X_i = 0
+            X_i = 0  
 
         X.append(X_i)
 
@@ -65,10 +65,11 @@ def trade_TD_index(TD, close, limit, fee):
     df = pd.DataFrame({'TD_varing' : netvalue, ' benchmark':  close.ix[TD.index[0]:].values}, index=TD.index)  
 
     if len(buyprice) > len(sellprice):
-        buyprice = buyprice[1:]          #if there is one more buy action, delete it.
+        buyprice = buyprice[: -len(buyprice) + len(sellprice)]
+        buy_date = buy_date[:  -len(buy_date) + len(sell_date)]
     trade_action = pd.DataFrame({'buyprice':buyprice, 'sellprice':sellprice, 'buydate':buy_date, 'selldate':sell_date})
     trade_action['returns'] = trade_action.sellprice / trade_action.buyprice -1
-    return df / df.iloc[0] , trade_action
+    return df / df.iloc[0] , trade_action 
 
 
 def TD_test(code, start, end, m, k , p, limit, fee):

@@ -367,13 +367,27 @@ def ret_analysis(df):
     grouped = df.groupby(lambda x: x.split(df.index[0][4])[0])
     grouped_pct = df_pct.groupby(lambda x: x.split(df_pct.index[0][4])[0])
     vol = grouped_pct.apply(lambda x: x.std() * np.sqrt(242.0))
-    returns = grouped_pct.apply(lambda x: (1 + x).cumprod() - 1 )
+    returns = grouped_pct.apply(lambda x: (1 + x).prod() - 1 )
     maxdrawdown = grouped.apply(lambda x: ((x - x.cummax()) / x.cummax()).min())
     pl = dict()
     pl['vol'] = vol
     pl['returns'] = returns
     pl['maxdrawdown'] = maxdrawdown
     return pd.DataFrame(pl)
+
+
+def curve_sta(df):
+    sta_list = [u'累计收益', u'年化收益', u'年化波动率', u'最大回撤', u'夏普比率', u'Calmar比率']
+    res = pd.DataFrame(columns=df.columns, index=sta_list)
+    for stock in df.columns:
+        net = df[stock]
+        res[stock][u'累计收益'] = net.iloc[-1] / net.iloc[0] - 1
+        res[stock][u'年化收益'] = np.power(net.iloc[-1] / net.iloc[0], 242.0 / net.shape[0]) - 1
+        res[stock][u'年化波动率'] = net.pct_change().std() * np.sqrt(242.0)
+        res[stock][u'最大回撤'] =   ((net - net.cummax()) / net.cummax()).min()
+        res[stock][u'夏普比率'] = (np.power(net.iloc[-1] / net.iloc[0], 242.0 / net.shape[0]) - 1 - 0.03) / (net.pct_change().std() * np.sqrt(242.0))
+        res[stock][u'Calmar比率'] = -(np.power(net.iloc[-1] / net.iloc[0], 242.0 / net.shape[0]) - 1)/ (((net - net.cummax()) / net.cummax()).min())
+    return res
 
 
 

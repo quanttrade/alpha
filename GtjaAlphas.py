@@ -344,7 +344,81 @@ def wma(A, n):
 
 
         def alpha049(self):
+            cond_1 = self.high + self.low >= delay(self.high, 1) + delay(self.low, 1)
+            bound = max(abs(self.high - delay(self.high, 1)), abs(self.low - delay(self.low, 2)))
+            alpha1 = bound.copy()
+            alpha1[cond_1] = 0
+            
+            return ts_sum(alpha1, 12) / ts_sum(bound, 12)
+
+
+        def alpha050(self):
+            cond_1 = self.high + self.low <= delay(self.high, 1) + delay(self.low, 1)
+            cond_2 = self.high + self.low >= delay(self.high, 1) + delay(self.low, 1)
+            bound = max(abs(self.high - delay(self.high, 1)), abs(self.low - delay(self.low, 2)))
+            alpha1 = bound.copy()
+            alpha2 = bound.copy()
+            alpha1[cond_1] = 0
+            alpha2[cond_2] = 0
+            return ts_sum(alpha1, 12) / ts_sum(bound, 12) - ts_sum(alpha2, 12) / ts_sum(bound, 12)
+
+
+        def alpha051(self):
+            cond_1 = self.high + self.low <= delay(self.high, 1) + delay(self.low, 1)
+            bound = max(abs(self.high - delay(self.high, 1)), abs(self.low - delay(self.low, 2)))
+            alpha1 = bound.copy()
+            alpha1[cond_1] = 0
+            return ts_sum(alpha1, 12) / ts_sum(bound, 12)
+
+
+        def alpha052(self):
+            return ts_sum(max(0, self.high - delay((self.high + self.low + self.close) / 3, 1)), 26) / ts_sum(max(0, self.high - delay((self.high + self.low + self.close) / 3, 1) - self.low), 26)
+
+
+        def alpha053(self):
+            return (self.close > delay(self.close, 1)).rolling(12).sum()
+
+
+        def alpha054(self):
             pass
+
+
+        def alpha055(self):
+            pass
+
+
+        def alpha056(self):
+            pass
+
+
+        def alpha057(self):
+            return sma((self.close - ts_min(self.low, 9)) / (ts_max(self.high, 9) - ts_min(self.low, 9)) * 100, 3)
+
+
+        def alpha058(self):
+            return (self.close > delay(self.close, 1)).rolling(20).sum() / 20 * 100
+
+
+        def alpha059(self):
+            alpha1 = max(self.high, delay(self.close, 1))
+            cond_1 = close > delay(self.close, 1)
+            alpha1[cond_1] = min(self.low, delay(self.close, 1))
+            cond_2 = self.close == delay(self.close, 1)
+            alpha2 = alpha1.copy()
+            alpha2[cond_2] = 0
+            return ts_sum(alpha2, 20)
+
+
+        def alpha60(self):
+            return ts_sum(((self.close - self.low) - (self.high - self.close)) / (self.high - self.low) *self.volume, 20)
+
+
+        def alpha061(self):
+            return 
+
+
+
+
 
 
 
