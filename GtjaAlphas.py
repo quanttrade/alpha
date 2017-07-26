@@ -134,6 +134,7 @@ def wma(A, n):
         self.vwap = pn_data['vwap']
         self.volume = pn_data['volume']
         self.returns = self.close.pct_change()
+        self.amount = self.volume * self.close
 
 
         def alpha001(self):
@@ -208,7 +209,12 @@ def wma(A, n):
 
 
         def alpha019(self):
-            pass
+            cond_1 = self.close < delay(self.close, 5)
+            cond_2 = self.close == delay(self.close, 5)
+            alpha = (self.close - delay(self.close, 5)) / self.close
+            alpha[cond_2] = 0
+            alpha[cond_1] = (self.close - delay(self.close, 5)) / delay(self.close, 5)
+            return alpha
 
 
         def alpha020(self):
@@ -220,11 +226,20 @@ def wma(A, n):
 
 
         def alpha022(self):
-            pass
+            retun sma((self.close - sma(self.close, 6)) / sma(self.close, 6) - delay((self.close - sma(self.close, 6)) / sma(self.close, 6), 3), 12)
 
 
         def alpha023(self):
-            pass
+            cond_1 = self.close > delay(self.close, 1)
+            cond_2 = self.close <= delay(self.close , 1)
+            alpha = stddev(close, 2)
+            alpha1 = alpha.copy()
+            alpha2 = alpha2.copy()
+            alpha1[cond_1] = 0
+            alpha2[cond_2] = 0
+            return sma(alpha2, 20) / (sma(alpha1, 20) + sma(alpha2, 20))
+
+            
 
 
         def alpha024(self):
@@ -415,6 +430,62 @@ def wma(A, n):
 
         def alpha061(self):
             return 
+
+
+        def alpha062(self):
+            return -1 * correlation(self.high, rank(self.volume), 5)
+
+
+        def alpha063(self):
+            return sma(max(self.close - delay(close, 1), 0), 6) / sma(abs(self.close - delay(self.close, 1)), 6)
+
+
+        def alpha064(self):
+            return max(rank(decay_linear(correlation(rank(self.vwap), rank(self.volume), 4), 4)), rank(decay_linear(ts_max(correlation(rank(self.close), rank(sma(self.volume, 60)), 4), 13), 14)))
+
+
+        def alpha065(self):
+            return sma(self.close) / self.close
+
+
+        def alpha066(self):
+            return (self.close - sma(self.close, 6)) / sma(self.close, 6) * 100
+
+
+        def  alpha067(self):
+            return sma(max(self.close - delay(self.close, 1), 0), 24) / sma(abs(self.close - delay(self.close, 1)), 24) * 100
+
+
+        def alpha068(self):
+            return sma(((self.high + self.low) / 2 -(delay(self.high, 1) + delay(self.low, 1)) / 2) * (self.high - self.low) / self.volume, 2)
+
+
+        def alpha069(self):
+            pass
+
+
+        def alpha070(self):
+            stddev(self.amount, 6)
+
+
+        def alpha071(self):
+            (self.close - sma(self.close, 24)) / (sma(self.close, 24)) * 100
+
+
+        def alpha072(self):
+            return sma((ts_max(self.high, 6) - self.close) / (ts_max(self.high, 6) - ts_max(self.low, 6)), 15)
+
+
+        def alpha073(self):
+            return ts_rank(decay_linear(decay_linear(correlation(self.close, self.volume, 10), 16), 4), 5) - ts_rank(decay_linear(correlation(self.vwap, sma(self.volume, 30), 4), 3))
+
+
+
+
+
+
+
+
 
 
 
