@@ -2,6 +2,7 @@ import alphalens
 import pandas as pd
 from scipy import stats
 import numpy as np
+from GtjaAlphas import *
 
 
 
@@ -79,7 +80,7 @@ def handle_factor(factor, prices, groupby, periods, path):
 
     factor_data_standard = alphalens.utils.get_clean_factor_and_forward_returns(factor_format,
                                                                                 prices_format,
-                                                                                periods)
+                                                                                periods=periods)
 
     quantile_returns_mean_standard, quantile_returns_std_standard = alphalens.performance.mean_return_by_quantile(
         factor_data_standard)
@@ -99,12 +100,12 @@ def handle_factor(factor, prices, groupby, periods, path):
         ic_standard.mean() / ic_standard.std()) * np.sqrt(252)
 
 
-    writer = pd.ExcelWriter(path)
-    factor.to_excel(writer, 'prime_factor')
-    factor_data_standard.to_excel(writer, 'factor_data_standard')
-    quantile_returns_mean_standard.to_excel(writer, 'quantile_returns_mean_standard')
-    ic_standard.to_excel(writer, 'ic_standard')
-    ic_summary_table.to_csv(writer, 'ic_summary_table')
+    
+    factor.to_excel(path + '//prime_factor.xlsx')
+    factor_data_standard.to_excel(path + '//factor_data_standard.xlsx')
+    quantile_returns_mean_standard.to_excel(path + '//quantile_returns_mean_standard.xlsx')
+    ic_standard.to_excel(path + '//ic_standard.xlsx')
+    ic_summary_table.to_excel(path + '//ic_summary_table.xlsx')
 
 
 
@@ -138,7 +139,7 @@ def handle_factor(factor, prices, groupby, periods, path):
 
         factor_data_key = alphalens.utils.get_clean_factor_and_forward_returns(factor_format,
                                                                                prices_format,
-                                                                               periods,
+                                                                               periods=periods,
                                                                                groupby=groupby[
                                                                                    key],
                                                                                by_group=True)
@@ -176,12 +177,75 @@ def handle_factor(factor, prices, groupby, periods, path):
 
 
         #save data to excel
-        factor_data_key.to_excel(writer, 'factor_data_' + key)
-        factor_returns.to_excel(writer, 'factor_returns_' + key)
-        quantile_returns_mean_key.to_excel(writer, 'quantile_returns_mean_' + key)
-        ic.to_excel(writer, 'ic_' + key)
-        ic_table.to_excel(writer, 'ic_table_' + key)
-        quantile_turnover_mean.to_excel(writer, 'quantile_turnover_mean_' + key)
+        factor_data_key.to_excel(path + '//factor_data_%s.xlsx' % key)
+        factor_returns.to_excel(path + '//factor_returns_%s.xlsx' % key)
+        quantile_returns_mean_key.to_excel(path + '//quantile_returns_mean_%s.xlsx' % key)
+        ic.to_excel(path + '//ic_%s.xlsx' % key)
+        ic_table.to_excel(path + '//ic_table_%s.xlsx' % key)
+        quantile_turnover_mean.to_excel(path + '//quantile_turnover_mean_%s.xlsx' % key)
+
+
+
+if __name__ == "__main__":
+
+
+    #get alpha function of GtjaAlpha
+
+    alpha_function = GtjaAlpha.__dict__.keys()
+    alpha_function.sort()
+    alpha_function = alpha_function[5:]
+
+    # load price and volume data
+
+    data = pd.read_csv('/Users/liyizheng/data/daily_data/stock_data.csv')
+    data,pn_data = load_data(data)
+    gtja = GtjaAlpha(pn_data)
+
+
+    # get class signal by hs300 and zz500
+    hs300 = pd.read_csv('/Users/liyizheng/data/daily_data//hs300_component.csv',index_col=0)
+    zz500 = pd.read_csv('/Users/liyizheng/data/daily_data//zz500_component.csv',index_col=0)
+    stock = [list(pn_data['volume'].columns) for i in range(hs300.shape[0])]
+    stock = pd.DataFrame(stock,index=hs300.index)
+    signal = pd.DataFrame(u'其余股票',index=stock.index,columns=pn_data['volume'].columns)
+    for date in stock.index:
+        hs300_td = hs300.ix[date]
+        zz500_td = zz500.ix[date]
+        stock_td = stock.ix[date]
+        signal.ix[date][set(hs300_td)&set(signal.columns)] = u'沪深300'
+        signal.ix[date][set(zz500_td)&set(signal.columns)] = u'中证500'
+
+    signal = format_factor(signal)
+
+    groupby = dict()
+    groupby['cap'] = signal
+
+
+    #set the period
+    periods = [1, 2, 4, 5, 10, 20]
+
+
+    path = ''
+
+
+    # caculate alpha_data and analyse
+    for alpha_name in alpha_function:
+        try:
+            alpha = eval('gtja.%s()' % alpha_name)
+
+            handle_factor(alpha, gtja.close.copy(), groupby, periods, path)
+
+        except Exception as e:
+            print e
+
+
+
+
+
+
+
+
+  
 
 
 
