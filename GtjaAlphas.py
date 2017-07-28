@@ -57,6 +57,14 @@ def ts_max(df, window=10):
     return df.rolling(window).max()
 
 
+def cross_max(df1, df2):
+    return (df1 + df2).abs() / 2.0 + (df1 - df2).abs() / 2.0
+
+
+def cross_min(df1, df2):
+    return (df1 + df2).abs() / 2.0 - (df1 - df2).abs() / 2.0
+
+
 def delta(df, period=1):
     return df.diff(period)
 
@@ -101,7 +109,7 @@ def regbeta(A, B, n):
     beta = pd.DataFrame(index=A.index, columns=A.columns)
     for stk in A.columns:
         model = pd.stats.ols.MovingOLS(y=B[stk], x=A[stk], window_type='rolling', window=n, intercept=True)
-        beta[stock] = model.beta.x
+        beta[stk] = model.beta.x
     return beta
 
 
@@ -109,7 +117,7 @@ def regresi(A, B, n):
     resid = pd.DataFrame(index=A.index, columns=A.columns)
     for stk in A.columns:
         model = pd.stats.ols.MovingOLS(y=B[stk], x=A[stk], window_type='rolling', window=n, intercept=True)
-        resid[stock] = model.resid
+        resid[stk] = model.resid
     return resid
 
 
@@ -127,10 +135,10 @@ class GtjaAlpha(object):
         :传入参数 pn_data: pandas.Panel
         """
         # 获取历史数据
-        self.open = pn_data['adjOpen']
-        self.high = pn_data['adjHigh']
-        self.low = pn_data['adjLow']
-        self.close = pn_data['adjClose']
+        self.open = pn_data['open']
+        self.high = pn_data['high']
+        self.low = pn_data['low']
+        self.close = pn_data['close']
         self.vwap = pn_data['vwap']
         self.volume = pn_data['volume']
         self.returns = self.close.pct_change()
@@ -148,15 +156,12 @@ class GtjaAlpha(object):
     def alpha003(self):
         cond_1 = self.close == delay(self.close, 1)
         cond_2 = self.close > delay(self.close, 1)
-        alpha = max(self.high, delay(self.close, 1))
-        alpha[cond_2] = min(self.low, delay(self.close, 1))
+        alpha = self.close - cross_max(self.high, delay(self.close, 1))
+        alpha[cond_2] = self.close - cross_min(self.low, delay(self.close, 1))
         alpha[cond_1] = 0
         return ts_sum(alpha, 6)
 
 
-
-    def alpha004(self):
-        pass
 
 
     def alpha005(self):
@@ -281,7 +286,7 @@ class GtjaAlpha(object):
 
 
     def alpha035(self):
-        min(rank(decay_linear(delta(self.open,1), 15)), rank(decay_linear(correlation(self.volume, self.open * 0.65 + self.close * 0.35, 17), 7)) * -1)
+        cross_min(rank(decay_linear(delta(self.open,1), 15)), rank(decay_linear(correlation(self.volume, self.open * 0.65 + self.close * 0.35, 17), 7)) * -1)
 
 
     def alpha036(self):
@@ -354,7 +359,7 @@ class GtjaAlpha(object):
 
     def alpha049(self):
         cond_1 = self.high + self.low >= delay(self.high, 1) + delay(self.low, 1)
-        bound = max(abs(self.high - delay(self.high, 1)), abs(self.low - delay(self.low, 2)))
+        bound = cross_max(abs(self.high - delay(self.high, 1)), abs(self.low - delay(self.low, 2)))
         alpha1 = bound.copy()
         alpha1[cond_1] = 0
             
@@ -364,7 +369,7 @@ class GtjaAlpha(object):
     def alpha050(self):
         cond_1 = self.high + self.low <= delay(self.high, 1) + delay(self.low, 1)
         cond_2 = self.high + self.low >= delay(self.high, 1) + delay(self.low, 1)
-        bound = max(abs(self.high - delay(self.high, 1)), abs(self.low - delay(self.low, 2)))
+        bound = cross_max(abs(self.high - delay(self.high, 1)), abs(self.low - delay(self.low, 2)))
         alpha1 = bound.copy()
         alpha2 = bound.copy()
         alpha1[cond_1] = 0
@@ -374,14 +379,14 @@ class GtjaAlpha(object):
 
     def alpha051(self):
         cond_1 = self.high + self.low <= delay(self.high, 1) + delay(self.low, 1)
-        bound = max(abs(self.high - delay(self.high, 1)), abs(self.low - delay(self.low, 2)))
+        bound = cross_max(abs(self.high - delay(self.high, 1)), abs(self.low - delay(self.low, 2)))
         alpha1 = bound.copy()
         alpha1[cond_1] = 0
         return ts_sum(alpha1, 12) / ts_sum(bound, 12)
 
 
     def alpha052(self):
-        return ts_sum(max(0, self.high - delay((self.high + self.low + self.close) / 3, 1)), 26) / ts_sum(max(0, self.high - delay((self.high + self.low + self.close) / 3, 1) - self.low), 26)
+        return ts_sum(cross_max(0, self.high - delay((self.high + self.low + self.close) / 3, 1)), 26) / ts_sum(cross_max(0, self.high - delay((self.high + self.low + self.close) / 3, 1) - self.low), 26)
 
 
     def alpha053(self):
@@ -398,9 +403,9 @@ class GtjaAlpha(object):
 
 
     def alpha059(self):
-        alpha1 = max(self.high, delay(self.close, 1))
+        alpha1 = cross_max(self.high, delay(self.close, 1))
         cond_1 = self.close > delay(self.close, 1)
-        alpha1[cond_1] = min(self.low, delay(self.close, 1))
+        alpha1[cond_1] = cross_min(self.low, delay(self.close, 1))
         cond_2 = self.close == delay(self.close, 1)
         alpha2 = alpha1.copy()
         alpha2[cond_2] = 0
@@ -417,11 +422,11 @@ class GtjaAlpha(object):
 
 
     def alpha063(self):
-        return sma(max(self.close - delay(self.close, 1), 0), 6) / sma(abs(self.close - delay(self.close, 1)), 6)
+        return sma(cross_max(self.close - delay(self.close, 1), 0), 6) / sma(abs(self.close - delay(self.close, 1)), 6)
 
 
     def alpha064(self):
-        return max(rank(decay_linear(correlation(rank(self.vwap), rank(self.volume), 4), 4)), rank(decay_linear(ts_max(correlation(rank(self.close), rank(sma(self.volume, 60)), 4), 13), 14)))
+        return cross_max(rank(decay_linear(correlation(rank(self.vwap), rank(self.volume), 4), 4)), rank(decay_linear(ts_max(correlation(rank(self.close), rank(sma(self.volume, 60)), 4), 13), 14)))
 
 
     def alpha065(self):
@@ -433,7 +438,7 @@ class GtjaAlpha(object):
 
 
     def  alpha067(self):
-        return sma(max(self.close - delay(self.close, 1), 0), 24) / sma(abs(self.close - delay(self.close, 1)), 24) * 100
+        return sma(cross_max(self.close - delay(self.close, 1), 0), 24) / sma(abs(self.close - delay(self.close, 1)), 24) * 100
 
 
     def alpha068(self):
@@ -459,6 +464,85 @@ class GtjaAlpha(object):
 
     def alpha074(self):
         return ts_rank(correlation(ts_sum(self.low * 0.35 + self.vwap * 0.65, 20), ts_sum(sma(self.volume, 40), 20), 7)) + ts_rank(correlation(rank(self.vwap), rank(self.volume), 6))
+    
+    
+    def alpha076(self):
+        return stddev((self.close / delay(self.close) - 1).abs() / self.volume, 20) / sma((self.close / delay(self.close) - 1).abs() / self.volume, 20)
+    
+    
+    def alpha077(self):
+        return cross_min(rank(decay_linear(self.high / 2.0 + self.low / 2.0 - self.vwap), 20), rank(decay_linear(correlation((self.high + self.low) / 2.0, sma(self.volume, 40), 3), 6)))
+    
+    
+    def alpha078(self):
+        return ((self.high + self.low + self.close) / 3.0 - sma((self.high + self.low + self.close) / 3.0, 12)) / sma((self.close - sma((self.high + self.low + self.close) / 3.0, 12)).abs(), 12)
+    
+    
+    def alpha079(self):
+        return sma(cross_max(self.close - delay(self.close, 1), 0), 12) / sma((self.close - delay(self.close, 1)).abs(), 12)
+    
+    
+    def alpha080(self):
+        return (self.volume - delay(self.volume, 5)) / delay(self.volume, 5)
+    
+    
+    def alpha081(self):
+        return sma(self.volume, 21) / self.volume
+    
+    
+    def alpha082(self):
+        return sma((ts_max(self.high, 6) - self.close) / (ts_max(self.high, 6) - ts_min(self.low, 6)), 20)
+    
+    
+    def alpha083(self):
+        return -1 * rank(covariance(rank(self.high), rank(self.volume), 5))
+    
+    
+    def alpha085(self):
+        return ts_rank(self.volume / sma(self.volume, 20.0), 20) * ts_rank(-1 * delta(self.close,7) / self.close, 8)
+    
+    
+    def alpha087(self):
+        return -1 * rank(decay_linear(delta(self.vwap, 4), 7)) + ts_rank(decay_linear(self.low - self.vwap) / (self.open - (self.low + self.high) / 2.0, 11), 7)
+    
+    def alpha088(self):
+        return self.close / delay(self.close, 20) -1
+    
+    
+    def alpha090(self):
+        return -1 *rank(correlation(rank(self.vwap), rank(self.volume), 5))
+        
+    def alpha091(self):
+        return -1 * rank(self.close / ts_max(self.close, 5)) * rank(correlation(sma(self.volume, 40), self.low, 5))
+    
+    def alpha093(self):
+        cond = self.open > delay(self.open, 1)
+        alpha = cross_max(self.open - self.low, self.open - delay(self.open, 1))
+        alpha[cond] = 0
+        alpha = alpha / self.close
+        return ts_sum(alpha, 20)
+    
+    
+    def alpha095(self):
+        return correlation(self.high / self.low, self.volume, 6).replace([np.inf, -np.inf], np.nan)
+    
+    
+    
+    def alpha096(self):
+        return sma(sma((self.close - ts_min(self.low, 9)) / (ts_max(self.high, 9) - ts_min(self.low, 9)), 3), 3)
+    
+    
+        
+    
+    
+    
+        
+    
+        
+        
+        
+        
+        
 
 
 
