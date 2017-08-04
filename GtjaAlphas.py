@@ -31,7 +31,7 @@ def correlation(x, y, window=10):
 
 def covariance(x, y, window=10):
     return x.rolling(window).cov(y)
-
+        
 
 def rolling_rank(na):
     return rankdata(na)[-1]
@@ -524,12 +524,14 @@ class GtjaAlpha(object):
     
     
     def alpha095(self):
-        return correlation(self.high / self.low, self.volume, 6).replace([np.inf, -np.inf], np.nan)
+        return -1 * correlation(self.high / self.low, self.volume, 6).replace([np.inf, -np.inf], np.nan)
     
     
     
     def alpha096(self):
         return sma(sma((self.close - ts_min(self.low, 9)) / (ts_max(self.high, 9) - ts_min(self.low, 9)), 3), 3)
+    
+    
     
     
         

@@ -488,3 +488,15 @@ class Alphas(object):
                  * self.volume / divisor).copy()
         return - ((2 * scale(rank(inner))) -
                   scale(rank(ts_argmax(self.close, 10))))
+
+
+
+def beta(adjHigh, adjLow):
+    beta_value = pd.DataFrame(index=adjHigh.index, columns=adjHigh.columns)
+    for stock in adjHigh.columns:
+        b = pd.stats.ols.MovingOLS(y=adjHigh[stock], x=adjLow[stock], window_type='rolling', window=20, intercept=True).beta.x
+        beta_value[stock].ix[b.index] = b
+    beta_value = beta_value.dropna(how='all', axis=1)
+    return beta_value
+
+
