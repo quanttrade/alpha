@@ -613,7 +613,7 @@ class GtjaAlpha(object):
 
 
     def alpha116(self):
-        return regbeta(self.close, pd.Series(20), 20)
+        return regbeta(self.close, pd.Series(20) + 1, 20)
 
 
     def alpha117(self):
@@ -731,7 +731,54 @@ class GtjaAlpha(object):
 
 
     def alpha144(self):
-        
+        pass
+
+
+    def alpha145(self):
+        return (sma(self.volume, 9) - sma(self.volume, 26)) / sma(self.volume, 12)
+
+
+    def alpha146(self):
+        pass
+
+
+    def alpha147(self):
+        return regbeta(sma(self.close, 12), pd.Series(12) + 1, 12)
+
+
+    def alpha148(self):
+        return rank(correlation(self.open, ts_sum(sma(self.volume, 60), 9), 6)) - rank(self.open - ts_min(self.open, 14))
+
+
+    def alpha149(self):
+        pass
+
+
+    def alpha150(self):
+        return (self.close + self.high + self.low) / 3 * self.volume
+
+
+    def alpha151(self):
+        return sma(self.close - delay(self.close, 20), 20)
+
+
+    def alpha152(self):
+        pass
+
+
+    def alpha153(self):
+        return (sma(self.close, 3) + sma(self.close, 6) + sma(self.close, 12) + sma(self.close, 24)) / 4
+
+
+    def alpha154(self):
+        pass
+
+
+    def alpha1
+
+
+
+
 
 
 
