@@ -798,4 +798,16 @@ class GtjaAlpha(object):
 
 
     def alpha161(self):
-        return
+        pass
+
+
+    def alpha162(self):
+        pass
+
+
+    def alpha163(self):
+        return rank(-1 * self.returns * sma(self.volume, 20) * self.vwap * (self.high - self.close))
+
+
+    def alpha164(self):
+        pass
