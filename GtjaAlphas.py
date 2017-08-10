@@ -251,13 +251,13 @@ class GtjaAlpha(object):
         alpha2[cond_2] = 0
         return sma(alpha2, 20) / (sma(alpha1, 20) + sma(alpha2, 20))
 
-            
+
     def alpha024(self):
         return sma(self.close - delay(self.close,5), 5)
 
 
     def alpha025(self):
-        return -1 * rank(delta(self.close, 7)) * (1 - rank(decay_linear(self.volume / sma(self.volume, 20), 9)) * (1 + rank(ts_sum(self.returns, 250)))) 
+        return -1 * rank(delta(self.close, 7)) * (1 - rank(decay_linear(self.volume / sma(self.volume, 20), 9)) * (1 + rank(ts_sum(self.returns, 250))))
 
 
     def alpha026(self):
@@ -271,7 +271,7 @@ class GtjaAlpha(object):
     def alpha028(self):
         return 3 * sma((self.close - delay(self.close, 3)) / (ts_max(self.high, 9) - ts_min(self.low, 9)) * 100, 3) - 2 * sma(sma((self.close - ts_min(self.low, 9))/ (ts_max(self.high, 9) - ts_max(self.low, 9)) * 100, 3), 3)
 
-        
+
     def alpha029(self):
         return (self.close - delay(self.close, 6)) / delay(self.close, 6) * self.volume
 
@@ -313,7 +313,7 @@ class GtjaAlpha(object):
 
 
     def alpha039(self):
-         return -rank(decay_linear(delta(self.close, 2), 8)) + rank(decay_linear(correlation(0.3 * self.vwap + 0.7 * self.open, ts_sum(sma(self.volume, 180), 37), 14), 12)) 
+         return -rank(decay_linear(delta(self.close, 2), 8)) + rank(decay_linear(correlation(0.3 * self.vwap + 0.7 * self.open, ts_sum(sma(self.volume, 180), 37), 14), 12))
 
 
     def alpha040(self):
@@ -370,7 +370,7 @@ class GtjaAlpha(object):
         bound = cross_max(abs(self.high - delay(self.high, 1)), abs(self.low - delay(self.low, 2)))
         alpha1 = bound.copy()
         alpha1[cond_1] = 0
-            
+
         return ts_sum(alpha1, 12) / ts_sum(bound, 12)
 
 
@@ -472,70 +472,70 @@ class GtjaAlpha(object):
 
     def alpha074(self):
         return rank(correlation(ts_sum(self.low * 0.35 + self.vwap * 0.65, 20), ts_sum(sma(self.volume, 40), 20), 7)) + rank(correlation(rank(self.vwap), rank(self.volume), 6))
-    
-    
+
+
     def alpha076(self):
         return stddev((self.close / delay(self.close) - 1).abs() / self.volume, 20) / sma((self.close / delay(self.close) - 1).abs() / self.volume, 20)
-    
-    
+
+
     def alpha077(self):
         return cross_min(rank(decay_linear(self.high / 2.0 + self.low / 2.0 - self.vwap), 20), rank(decay_linear(correlation((self.high + self.low) / 2.0, sma(self.volume, 40), 3), 6)))
-    
-    
+
+
     def alpha078(self):
         return ((self.high + self.low + self.close) / 3.0 - sma((self.high + self.low + self.close) / 3.0, 12)) / sma((self.close - sma((self.high + self.low + self.close) / 3.0, 12)).abs(), 12)
-    
-    
+
+
     def alpha079(self):
         return sma(cross_max(self.close - delay(self.close, 1), 0), 12) / sma((self.close - delay(self.close, 1)).abs(), 12)
-    
-    
+
+
     def alpha080(self):
         return (self.volume - delay(self.volume, 5)) / delay(self.volume, 5)
-    
-    
+
+
     def alpha081(self):
         return sma(self.volume, 21) / self.volume
-    
-    
+
+
     def alpha082(self):
         return sma((ts_max(self.high, 6) - self.close) / (ts_max(self.high, 6) - ts_min(self.low, 6)), 20)
-    
-    
+
+
     def alpha083(self):
         return -1 * rank(covariance(rank(self.high), rank(self.volume), 5))
-    
-    
+
+
     def alpha085(self):
         return ts_rank(self.volume / sma(self.volume, 20), 20) * ts_rank(-1 * delta(self.close,7) / self.close, 8)
-    
-    
+
+
     def alpha087(self):
         return -1 * rank(decay_linear(delta(self.vwap, 4), 7)) + ts_rank(decay_linear(self.low - self.vwap) / (self.open - (self.low + self.high) / 2.0, 11), 7)
-    
+
     def alpha088(self):
         return self.close / delay(self.close, 20) -1
-    
-    
+
+
     def alpha090(self):
         return -1 *rank(correlation(rank(self.vwap), rank(self.volume), 5))
-        
+
     def alpha091(self):
         return -1 * rank(self.close / ts_max(self.close, 5)) * rank(correlation(sma(self.volume, 40), self.low, 5))
-    
+
     def alpha093(self):
         cond = self.open > delay(self.open, 1)
         alpha = cross_max(self.open - self.low, self.open - delay(self.open, 1))
         alpha[cond] = 0
         alpha = alpha / self.close
         return ts_sum(alpha, 20)
-    
-    
+
+
     def alpha095(self):
         return stddev(self.amount, 20)
-    
-    
-    
+
+
+
     def alpha096(self):
         return sma(sma((self.close - ts_min(self.low, 9)) / (ts_max(self.high, 9) - ts_min(self.low, 9)), 3), 3)
 
@@ -774,18 +774,28 @@ class GtjaAlpha(object):
         pass
 
 
-    def alpha1
+    def alpha155(self):
+        pass
 
 
+    def alpha157(self):
+        pass
 
 
+    def alpha158(self):
+        return (self.high - self.low) / self.close
 
 
+    def alpha159(self):
+        pass
 
 
+    def alpha160(self):
+        cond = self.close > delay(self.close)
+        alpha = stddev(self.close, 20)
+        alpha[cond] = 0
+        return sma(alpha, 20)
 
 
-
-
-
-
+    def alpha161(self):
+        return
