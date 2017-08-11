@@ -16,10 +16,7 @@ import alphalens
 import os
 
 
-<<<<<<< HEAD
-=======
 
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 def ts_sum(df, window=10):
     return df.rolling(window).sum()
 
@@ -103,16 +100,10 @@ def decay_linear(df, period=10):
 
 def regbeta(A, B, n):
     beta = pd.DataFrame(index=A.index, columns=A.columns)
-<<<<<<< HEAD
-    for stk in A.columns:
-        model = pd.stats.ols.MovingOLS(
-            y=B[stk], x=A[stk], window_type='rolling', window=n, intercept=True)
-=======
     if isinstance(B, pd.DataFrame) and A.shape == B.shape:
         for stk in A.columns:
             model = pd.stats.ols.MovingOLS(
                 y=A[stk], x=B[stk], window_type='rolling', window=n, intercept=True)
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
         beta[stk] = model.beta.x
 
     if isinstance(B, pd.DataFrame) and B.shape[0] == n:
@@ -144,8 +135,6 @@ def wma(A, n):
     return A.rolling(n).apply(lambda x: x.T.dot(weight))
 
 
-<<<<<<< HEAD
-=======
 def highday(df, window=10):
     return (ts_argmax(df, window) - window).abs()
 
@@ -164,7 +153,6 @@ def sumif(df, n, condition):
     return ts_sum(alpha, n)
 
 
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 class GtjaAlpha(object):
 
     def __init__(self, pn_data):
@@ -296,11 +284,7 @@ class GtjaAlpha(object):
         return rank(ts_sum(correlation(rank(self.volume), rank(self.vwap), 6), 2))
 
     def alpha037(self):
-<<<<<<< HEAD
-        return -1 * rank(ts_sum(self.open, 5) * ts_sum(self.returns, 5) - delay(ts_sum(self.open, 5) * ts_sum(self.returns, 5)), 10)
-=======
         return -1 * ts_rank(ts_sum(self.open, 5) * ts_sum(self.returns, 5) - delay(ts_sum(self.open, 5) * ts_sum(self.returns, 5)), 10)
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 
     def alpha038(self):
         cond = ts_sum(self.high, 20) / 20 - self.high >= 0
@@ -404,22 +388,14 @@ class GtjaAlpha(object):
         alpha2[cond_2] = 0
         return ts_sum(alpha2, 20)
 
-<<<<<<< HEAD
-    def alpha60(self):
-=======
     def alpha060(self):
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
         return ts_sum(((self.close - self.low) - (self.high - self.close)) / (self.high - self.low) * self.volume, 20)
 
     def alpha062(self):
         return -1 * correlation(self.high, rank(self.volume), 5)
 
     def alpha063(self):
-<<<<<<< HEAD
-        return sma(cross_max(self.close - delay(self.close, 1), 0), 6) / sma(abs(self.close - delay(self.close, 1)), 6)
-=======
         return sma(cross_max(self.close - delay(self.close, 1), 0), 6) / sma((self.close - delay(self.close, 1)).abs(), 6)
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 
     def alpha064(self):
         return cross_max(rank(decay_linear(correlation(rank(self.vwap), rank(self.volume), 4), 4)), rank(decay_linear(ts_max(correlation(rank(self.close), rank(sma(self.volume, 60)), 4), 13), 14)))
@@ -431,11 +407,7 @@ class GtjaAlpha(object):
         return (self.close - sma(self.close, 6)) / sma(self.close, 6) * 100
 
     def alpha067(self):
-<<<<<<< HEAD
-        return sma(cross_max(self.close - delay(self.close, 1), 0), 24) / sma(abs(self.close - delay(self.close, 1)), 24) * 100
-=======
         return sma(cross_max(self.close - delay(self.close, 1), 0), 24) / sma(np.abs(self.close - delay(self.close, 1)), 24) * 100
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 
     def alpha068(self):
         return sma(((self.high + self.low) / 2 - (delay(self.high, 1) + delay(self.low, 1)) / 2) * (self.high - self.low) / self.volume, 2)
@@ -480,11 +452,7 @@ class GtjaAlpha(object):
         return -1 * rank(covariance(rank(self.high), rank(self.volume), 5))
 
     def alpha085(self):
-<<<<<<< HEAD
-        return ts_rank(self.volume / sma(self.volume, 20.0), 20) * ts_rank(-1 * delta(self.close, 7) / self.close, 8)
-=======
         return ts_rank(self.volume / sma(self.volume, 20), 20) * ts_rank(-1 * delta(self.close, 7) / self.close, 8)
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 
     def alpha087(self):
         return -1 * rank(decay_linear(delta(self.vwap, 4), 7)) + ts_rank(decay_linear(self.low - self.vwap) / (self.open - (self.low + self.high) / 2.0, 11), 7)
@@ -507,11 +475,7 @@ class GtjaAlpha(object):
         return ts_sum(alpha, 20)
 
     def alpha095(self):
-<<<<<<< HEAD
-        return correlation(self.high / self.low, self.volume, 6).replace([np.inf, -np.inf], np.nan)
-=======
         return stddev(self.amount, 20)
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 
     def alpha096(self):
         return sma(sma((self.close - ts_min(self.low, 9)) / (ts_max(self.high, 9) - ts_min(self.low, 9)), 3), 3)
@@ -538,8 +502,6 @@ class GtjaAlpha(object):
     def alpha103(self):
         return (20 - lowday(self.low, 20) / 20)
 
-<<<<<<< HEAD
-=======
     def alpha104(self):
         return -1 * delta(correlation(self.high, self.volume, 5), 5) * rank(stddev(self.close, 20))
 
@@ -786,7 +748,6 @@ class GtjaAlpha(object):
         return correlation(sma(self.volume, 20), self.low, 5) + (self.high * 0.5 + self.low * 0.5 - self.close)
 
 
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 def load_data(data, prime_close):
     data['tradedate'] = data.tradedate.apply(str)
     data['tradedate'] = pd.DatetimeIndex(data.tradedate)
@@ -908,20 +869,13 @@ def handle_factor(factor, prices, groupby, regression，periods, path):
     ic_summary_table["Ann. IR"] = (
         ic_standard.mean() / ic_standard.std()) * np.sqrt(252)
 
-<<<<<<< HEAD
-    factor.to_excel(path + '\\prime_factor.xlsx')
-    factor_data_standard.to_excel(path + '\\factor_data_standard.xlsx')
-=======
     factor.to_hdf(path + '\\prime_factor.h5', 'table')
     factor_data_standard.to_hdf(path + '\\factor_data_standard.h5', 'table')
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
     quantile_returns_mean_standard.to_excel(
         path + '\\quantile_returns_mean_standard.xlsx')
     ic_standard.to_excel(path + '\\ic_standard.xlsx')
     ic_summary_table.to_excel(path + '\\ic_summary_table.xlsx')
 
-<<<<<<< HEAD
-=======
 
     regress_factor = regress_one(factor, regression)
     factor_data_regress = alphalens.utils.get_clean_factor_and_forward_returns(format_factor(regress_factor),
@@ -955,7 +909,6 @@ def handle_factor(factor, prices, groupby, regression，periods, path):
 
 
 
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
     # factor performance in different group(by industry, size, value ...etc)
 
     def information_statistcs(ic):  # caculate ic_statitic use the daily ic data
@@ -1021,11 +974,7 @@ def handle_factor(factor, prices, groupby, regression，periods, path):
         quantile_turnover_mean = pd.Panel(quantile_turnover).mean()
 
         # save data to excel
-<<<<<<< HEAD
-        factor_data_key.to_excel(path + '\\factor_data_%s.xlsx' % key)
-=======
         factor_data_key.to_hdf(path + '\\factor_data_%s.h5' % key, 'table')
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
         factor_returns.to_excel(path + '\\factor_returns_%s.xlsx' % key)
         quantile_returns_mean_key.to_excel(
             path + '\\quantile_returns_mean_%s.xlsx' % key)
@@ -1033,8 +982,6 @@ def handle_factor(factor, prices, groupby, regression，periods, path):
         ic_table.to_excel(path + '\\ic_table_%s.xlsx' % key)
         quantile_turnover_mean.to_excel(
             path + '\\quantile_turnover_mean_%s.xlsx' % key)
-<<<<<<< HEAD
-=======
 
     return ic_summary_table, ic_summary_table_regress
 
@@ -1045,7 +992,6 @@ def regress_one(y, x):
     b = (count * (x * y).sum(axis=1) - x.sum(axis=1) *
          y.sum(axis=1)) / (count * (x ** 2).sum(axis=1) - (x.sum(axis=1))**2)
     return y - x.multiply(b, axis=0)
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 
 
 if __name__ == "__main__":
@@ -1082,11 +1028,8 @@ if __name__ == "__main__":
 
     # set the period
     periods = [1, 3, 5, 10, 20, 30, 60]
-<<<<<<< HEAD
-=======
 
     path = 'E:\gtja_alpha'
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 
     ic_table = pd.DataFrame()
 
@@ -1106,10 +1049,6 @@ if __name__ == "__main__":
             if not os.path.exists(path + '\%s' % alpha_name):
                 os.mkdir(path + '\%s' % alpha_name)
 
-<<<<<<< HEAD
-            handle_factor(alpha, gtja.close.copy(), groupby,
-                          periods, path + '\%s' % alpha_name)
-=======
             ic_summary_table, ic_summary_table_regress = handle_factor(alpha, gtja.close.copy(), groupby, cap_regress
                           periods, path + '\%s' % alpha_name)
             ic_summary_table['alpha_name'] = alpha_name
@@ -1117,14 +1056,10 @@ if __name__ == "__main__":
             ic_table = pd.concat([ic_table, ic_summary_table])
             ic_table_cap = pd.concat([ic_table_cap, ic_summary_table_regress])
 
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 
             del alpha
 
         except Exception as e:
             print e
-<<<<<<< HEAD
-=======
     ic_table.to_csv('D:\data\daily_data\\ic_table.csv')
     ic_table_cap.to_csv('D:\data\daily_data\\ic_table_cap.csv')
->>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
