@@ -11,11 +11,15 @@ from numpy import abs
 from numpy import log
 from numpy import sign
 from scipy.stats import rankdata
+from scipy import stats
 import alphalens
-from statsmodels import stats
 import os
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 def ts_sum(df, window=10):
     return df.rolling(window).sum()
 
@@ -61,11 +65,11 @@ def ts_max(df, window=10):
 
 
 def cross_max(df1, df2):
-    return (df1 + df2).abs() / 2.0 + (df1 - df2).abs() / 2.0
+    return (df1 + df2) / 2.0 + (df1 - df2).abs() / 2.0
 
 
 def cross_min(df1, df2):
-    return (df1 + df2).abs() / 2.0 - (df1 - df2).abs() / 2.0
+    return (df1 + df2) / 2.0 - (df1 - df2).abs() / 2.0
 
 
 def delta(df, period=1):
@@ -93,27 +97,36 @@ def ts_argmin(df, window=10):
 
 
 def decay_linear(df, period=10):
-    if df.isnull().values.any():
-        df.fillna(method='ffill', inplace=True)
-        df.fillna(method='bfill', inplace=True)
-        df.fillna(value=0, inplace=True)
-    na_lwma = np.zeros_like(df)
-    na_lwma[:period, :] = df.ix[:period, :]
-    na_series = df.as_matrix()
-    divisor = df.as_matrix()
-    y = (np.arange(period) + 1) * 1.0 / divisor
-    for row in range(period + 1, df.shape[0]):
-        x = na_series[row - period + 1:row + 1, :]
-        na_lwma[row, :] - (np.dot(x.T, y))
-    return pd.DataFrame(na_lwma, index=df.index, columns=df.columns)
+    weight = period - np.arange(period)
+    return df.rolling(period).apply(lambda x: np.average(x, weights=weight))
 
 
 def regbeta(A, B, n):
     beta = pd.DataFrame(index=A.index, columns=A.columns)
+<<<<<<< HEAD
     for stk in A.columns:
         model = pd.stats.ols.MovingOLS(
             y=B[stk], x=A[stk], window_type='rolling', window=n, intercept=True)
+=======
+    if isinstance(B, pd.DataFrame) and A.shape == B.shape:
+        for stk in A.columns:
+            model = pd.stats.ols.MovingOLS(
+                y=A[stk], x=B[stk], window_type='rolling', window=n, intercept=True)
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
         beta[stk] = model.beta.x
+
+    if isinstance(B, pd.DataFrame) and B.shape[0] == n:
+        for stk in A.columns:
+            x = B[stk]
+            beta[stk] = A[stk].rolling(n).apply(lambda y: (
+                n * x.dot(y) - x.sum() * y.sum() / (n * (x ** 2).sum() - (x.sum()) ** 2)))
+
+    if isinstance(B, pd.Series) and len(B) == n:
+        for stk in A.columns:
+            x = B
+            beta[stk] = A[stk].rolling(n).apply(lambda y: (
+                n * x.dot(y) - x.sum() * y.sum() / (n * (x ** 2).sum() - (x.sum()) ** 2)))
+
     return beta
 
 
@@ -131,6 +144,27 @@ def wma(A, n):
     return A.rolling(n).apply(lambda x: x.T.dot(weight))
 
 
+<<<<<<< HEAD
+=======
+def highday(df, window=10):
+    return (ts_argmax(df, window) - window).abs()
+
+
+def lowday(df, window=10):
+    return (ts_argmin(df, window) - window).abs()
+
+
+def count(condition, n):
+    return condition.rolling(n).sum()
+
+
+def sumif(df, n, condition):
+    alpha = df.copy()
+    alpha[True - condition] = 0
+    return ts_sum(alpha, n)
+
+
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 class GtjaAlpha(object):
 
     def __init__(self, pn_data):
@@ -262,7 +296,11 @@ class GtjaAlpha(object):
         return rank(ts_sum(correlation(rank(self.volume), rank(self.vwap), 6), 2))
 
     def alpha037(self):
+<<<<<<< HEAD
         return -1 * rank(ts_sum(self.open, 5) * ts_sum(self.returns, 5) - delay(ts_sum(self.open, 5) * ts_sum(self.returns, 5)), 10)
+=======
+        return -1 * ts_rank(ts_sum(self.open, 5) * ts_sum(self.returns, 5) - delay(ts_sum(self.open, 5) * ts_sum(self.returns, 5)), 10)
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 
     def alpha038(self):
         cond = ts_sum(self.high, 20) / 20 - self.high >= 0
@@ -277,7 +315,7 @@ class GtjaAlpha(object):
         alpha1 = self.volume.copy()
         alpha2 = self.volume.copy()
         cond_1 = self.close <= delay(self.close, 1)
-        cond_2 = self > delay(self.close, 1)
+        cond_2 = self.close > delay(self.close, 1)
         alpha1[cond_1] = 0
         alpha2[cond_2] = 0
         return ts_sum(alpha1, 26) / ts_sum(alpha2, 26)
@@ -366,14 +404,22 @@ class GtjaAlpha(object):
         alpha2[cond_2] = 0
         return ts_sum(alpha2, 20)
 
+<<<<<<< HEAD
     def alpha60(self):
+=======
+    def alpha060(self):
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
         return ts_sum(((self.close - self.low) - (self.high - self.close)) / (self.high - self.low) * self.volume, 20)
 
     def alpha062(self):
         return -1 * correlation(self.high, rank(self.volume), 5)
 
     def alpha063(self):
+<<<<<<< HEAD
         return sma(cross_max(self.close - delay(self.close, 1), 0), 6) / sma(abs(self.close - delay(self.close, 1)), 6)
+=======
+        return sma(cross_max(self.close - delay(self.close, 1), 0), 6) / sma((self.close - delay(self.close, 1)).abs(), 6)
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 
     def alpha064(self):
         return cross_max(rank(decay_linear(correlation(rank(self.vwap), rank(self.volume), 4), 4)), rank(decay_linear(ts_max(correlation(rank(self.close), rank(sma(self.volume, 60)), 4), 13), 14)))
@@ -385,7 +431,11 @@ class GtjaAlpha(object):
         return (self.close - sma(self.close, 6)) / sma(self.close, 6) * 100
 
     def alpha067(self):
+<<<<<<< HEAD
         return sma(cross_max(self.close - delay(self.close, 1), 0), 24) / sma(abs(self.close - delay(self.close, 1)), 24) * 100
+=======
+        return sma(cross_max(self.close - delay(self.close, 1), 0), 24) / sma(np.abs(self.close - delay(self.close, 1)), 24) * 100
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 
     def alpha068(self):
         return sma(((self.high + self.low) / 2 - (delay(self.high, 1) + delay(self.low, 1)) / 2) * (self.high - self.low) / self.volume, 2)
@@ -430,7 +480,11 @@ class GtjaAlpha(object):
         return -1 * rank(covariance(rank(self.high), rank(self.volume), 5))
 
     def alpha085(self):
+<<<<<<< HEAD
         return ts_rank(self.volume / sma(self.volume, 20.0), 20) * ts_rank(-1 * delta(self.close, 7) / self.close, 8)
+=======
+        return ts_rank(self.volume / sma(self.volume, 20), 20) * ts_rank(-1 * delta(self.close, 7) / self.close, 8)
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 
     def alpha087(self):
         return -1 * rank(decay_linear(delta(self.vwap, 4), 7)) + ts_rank(decay_linear(self.low - self.vwap) / (self.open - (self.low + self.high) / 2.0, 11), 7)
@@ -453,12 +507,286 @@ class GtjaAlpha(object):
         return ts_sum(alpha, 20)
 
     def alpha095(self):
+<<<<<<< HEAD
         return correlation(self.high / self.low, self.volume, 6).replace([np.inf, -np.inf], np.nan)
+=======
+        return stddev(self.amount, 20)
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 
     def alpha096(self):
         return sma(sma((self.close - ts_min(self.low, 9)) / (ts_max(self.high, 9) - ts_min(self.low, 9)), 3), 3)
 
+    def alpha097(self):
+        return stddev(self.volume, 10)
 
+    def alpha098(self):
+        cond = delta(ts_sum(self.close, 100) / 100.0, 100) / delay(self.close, 100) <= 0.05
+        alpha = -1 * delta(self.close, 3)
+        alpha[cond] = -1 * (self.close - ts_min(self.close, 100))
+        return alpha
+
+
+    def alpha099(self):
+        return -1 * rank(covariance(rank(self.close), rank(self.volume), 5))
+
+    def alpha100(self):
+        return stddev(self.volume, 20)
+
+    def alpha102(self):
+        return sma(cross_max(self.volume - delay(self.volume, 1), 0), 6) / sma((self.volume - delay(self.volume, 1)).abs(), 6)
+
+    def alpha103(self):
+        return (20 - lowday(self.low, 20) / 20)
+
+<<<<<<< HEAD
+=======
+    def alpha104(self):
+        return -1 * delta(correlation(self.high, self.volume, 5), 5) * rank(stddev(self.close, 20))
+
+    def alpha105(self):
+        return -1 * correlation(rank(self.open), rank(self.volume), 10)
+
+    def alpha106(self):
+        return self.close - delay(self.close, 20)
+
+    def alpha107(self):
+        return -1 * rank(self.open - delay(self.high, 1)) * rank(self.open - delay(self.close, 1)) * rank(self.open - delay(self.low, 1))
+
+    def alpha108(self):
+        return rank(self.high - ts_min(self.high, 2)) ** rank(correlation(self.vwap), sma(self.volume, 120), 6) * -1
+
+    def alpha109(self):
+        return sma(self.high - self.low, 10) / sma(sma(self.high - self.low, 10), 10)
+
+    def alpha110(self):
+        return ts_sum(cross_max(0, self.high - delay(self.close, 1)), 20) / ts_sum(cross_max(0, delay(self.close, 1) - self.low), 20)
+
+    def alpha111(self):
+        return sma(self.volume * (self.close - self.low - self.high + self.close) / (self.high - self.low), 11) - sma(self.volume * (self.close - self.low - self.high + self.close) / (self.high - self.low), 4)
+
+    def alpha112(self):
+        cond_1 = self.close >= delay(self.close)
+        cond_2 = self.close <= delay(self.close)
+        alpha = self.close - delay(self.close)
+        ts_1 = alpha.copy()
+        ts_1[cond_2] = 0
+        ts_2 = alpha.abs().copy()
+        ts_2[cond_1] = 0
+        return (ts_sum(ts_1, 12) - ts_sum(ts_2, 12)) / (ts_sum(ts_1, 12) + ts_sum(ts_2, 12))
+
+
+    def alpha113(self):
+        return -1 * rank(ts_sum(delay(self.close, 5), 20) / 20) * correlation(self.close, self.volume, 2) * rank(correlation(ts_sum(self.close, 5), ts_sum(self.close, 20), 2))
+
+    def alpha114(self):
+        return rank(delay((self.high - self.low) / ts_sum(self.close, 5) / 5), 2) * rank(rank(self.volume) / (self.high - self.low) / (ts_sum(self.close, 5) / 5) / (self.vwap - self.close))
+
+    def alpha115(self):
+        return rank(correlation(self.high * 0.9 + self.close * 0.1, sma(self.volume, 30), 10)) ** rank(correlation(ts_rank(self.high * 0.5 + self.low * 0.5, 4), ts_rank(self.volume, 10), 7))
+
+    def alpha116(self):
+        return regbeta(self.close, pd.Series(20) + 1, 20)
+
+    def alpha117(self):
+        return ts_rank(self.volume, 32) * (1 - ts_rank((self.close + self.high - self.low), 16)) * (1 - ts_rank(self.returns, 32))
+
+    def alpha118(self):
+        return ts_sum(self.high - self.open, 20) / ts_sum(self.open - self.low, 20)
+
+    def alpha119(self):
+        return rank(decay_linear(correlation(self.vwap, ts_sum(sma(self.volume, 5), 26), 5), 7)) -  rank(decay_linear(ts_rank(ts_min(correlation(rank(self.open), rank(sma(self.volume, 15)), 21), 9), 7), 8))
+
+    def alpha120(self):
+        return rank(self.vwap - self.close) / rank(self.vwap + self.close)
+
+    def alpha121(self):
+        return rank(self.vwap - ts_min(self.vwap, 12)) ** ts_rank(correlation(ts_rank(self.vwap, 20), ts_rank(sma(self.volume, 60), 2), 18), 3) * -1
+
+    def alpha122(self):
+        return (sma(sma(sma(np.log(self.close), 13), 13), 13) - delay(sma(sma(sma(np.log(self.close), 13), 13), 13), 1)) / delay(sma(sma(sma(np.log(self.close), 13), 13), 13), 1)
+
+    def alpha123(self):
+        return rank(correlation(ts_sum(self.high * 0.5 + self.low * 0.5, 20), ts_sum(sma(self.volume, 60), 20),  9)) - rank(correlation(self.low, self.volume, 6))
+
+    def alpha124(self):
+        return (self.close - self.vwap) / decay_linear(rank(ts_max(self.close, 30)), 2)
+
+    def alpha125(self):
+        return rank(decay_linear(correlation(self.vwap, sma(self.volume, 80), 17), 20)) / rank(decay_linear(delta(self.close * 0.5 + self.vwap * 0.5, 3), 16))
+
+    def alpha126(self):
+        return (self.close + self.high + self.low) / 3
+
+    def alpha127(self):
+        return sma((self.close - ts_max(self.close, 12)) / ts_max(self.close, 12), 20)
+
+    def alpha128(self):
+        cond_1 = (self.high + self.low + self.close) >= delay(self.high + self.low + self.close)
+        cond_2 = (self.high + self.low + self.close) <= delay(self.high + self.low + self.close)
+        alpha = (self.high + self.low + self.close) / 3.0 * self.volume
+        ts_1, ts_2 = alpha.copy(), alpha.copy()
+        ts_1[cond_2] = 0
+        ts_2[cond_1] = 0
+        return 100 - (100 / (1 + ts_sum(ts_1, 14)/ ts_sum(ts_2, 14)))
+
+    def alpha129(self):
+        cond = self.close >= delay(self.close, 1)
+        alpha = (self.close - delay(self.close, 1)).abs()
+        alpha[cond] = 0
+        return ts_sum(alpha, 12)
+
+    def alpha130(self):
+        return rank(decay_linear(correlation(self.high * 0.5 + self.low * 0.5, sma(self.volume, 40), 9), 10)) / rank(decay_linear(correlation(rank(self.vwap), rank(self.volume), 7), 3))
+
+    def alpha131(self):
+        return rank(delta(self.vwap, 1)) ** ts_rank(correlation(self.close, sma(self.volume, 50), 18), 18)
+
+    def alpha132(self):
+        return sma(self.amount, 20)
+
+    def alpha133(self):
+        return (20 - highday(self.high, 20) / 20) / 20 - (20 - lowday(self.low, 20) / 20)
+
+    def alpha134(self):
+        return (self.close - delay(self.close, 12)) / delay(self.close, 12) * self.volume
+
+    def alpha135(self):
+        return sma(delay(self.close / delay(self.close, 20, 1)), 20)
+
+    def alpha136(self):
+        return (-1 * rank(delta(self.returns, 3))) * correlation(self.open, self.volume, 10)
+
+    def alpha138(self):
+        return (rank(decay_linear(delta(self.low * 0.7 + self.vwap * 0.3, 3), 20) - ts_rank(decay_linear(ts_rank(correlation(ts_rank(self.low, 8), ts_rank(sma(self.volume, 60), 17), 5), 19), 16), 7)))
+
+    def alpha139(self):
+        return -1 * correlation(self.open, self.volume, 10)
+
+    def alpha140(self):
+        return cross_min(rank(decay_linear(rank(self.open) + rank(self.low) - rank(self.high) - rank(self.close), 8)), ts_rank(decay_linear(correlation(ts_rank(self.close, 8), ts_rank(sma(self.volume, 60), 20), 8), 7), 3))
+
+    def alpha141(self):
+        return rank(correlation(rank(self.high), rank(sma(self.volume, 15)), 9)) * -1
+
+    def alpha142(self):
+        return -1 * rank(ts_rank(self.close, 10)) * rank(delta(delta(self.close))) * rank(ts_rank(self.volume / sma(self.volume, 20), 5))
+
+    def alpha143(self):
+        cond = self.close > delay(self.close)
+        alpha = delay(self.alpha143())
+        alpha[cond] = (self.close - delay(self.close)) / \
+            delay(self.close) * self.alpha143()
+        return alpha
+
+    def alpha144(self):
+        return sumif((self.close / delay(self.close) - 1).abs() / self.amount, 20, self.close < delay(self.close)) / count(self.close < delay(self.close), 20)
+
+    def alpha145(self):
+        return (sma(self.volume, 9) - sma(self.volume, 26)) / sma(self.volume, 12)
+
+    def alpha147(self):
+        return regbeta(sma(self.close, 12), pd.Series(12) + 1, 12)
+
+    def alpha148(self):
+        return rank(correlation(self.open, ts_sum(sma(self.volume, 60), 9), 6)) - rank(self.open - ts_min(self.open, 14))
+
+    def alpha150(self):
+        return (self.close + self.high + self.low) / 3 * self.volume
+
+    def alpha151(self):
+        return sma(self.close - delay(self.close, 20), 20)
+
+    def alpha152(self):
+        return sma(sma(delay(sma(delay(self.close / delay(self.close, 9)),9)), 12) - sma(delay(sma(delay(self.close / delay(self.close, 9)), 9)), 26), 9)
+
+    def alpha153(self):
+        return (sma(self.close, 3) + sma(self.close, 6) + sma(self.close, 12) + sma(self.close, 24)) / 4
+
+    def alpha158(self):
+        return (self.high - self.low) / self.close
+
+    def alpha160(self):
+        cond = self.close > delay(self.close)
+        alpha = stddev(self.close, 20)
+        alpha[cond] = 0
+        return sma(alpha, 20)
+
+    def alpha161(self):
+        return sma(cross_max(cross_max(self.high - self.low, np.abs(delay(self.close) - self.high)), np.abs(delay(self.close) - self.low)), 12)
+
+    def alpha163(self):
+        return rank(-1 * self.returns * sma(self.volume, 20) * self.vwap * (self.high - self.close))
+
+    def alpha164(self):
+        cond = self.close <= delay(self.close)
+        alpha = 1 / (self.close - delay(self.close))
+        alpha[cond] = 1
+        return sma((alpha - ts_min(alpha, 12)) / (self.high - self.low), 13)
+
+    def alpha167(self):
+        cond = self.close <= delay(self.close)
+        alpha = self.close - delay(self.close)
+        alpha[cond] = 0
+        return ts_sum(alpha, 12)
+
+    def alpha168(self):
+        return self.volume / sma(self.volume, 20) * -1
+
+    def alpha169(self):
+        return sma(sma(delay(sma(self.close - delay(self.close), 9)), 12) - sma(delay(sma(self.close - delay(self.close), 9)), 26), 10)
+
+    def alpha170(self):
+        return rank(1.0 / self.close) * self.volume / sma(self.volume, 20) * (self.high *rank(self.high - self.close)) / (ts_sum(self.high, 5) / 5) - rank(self.vwap - delay(self.vwap))
+
+    def alpha171(self):
+        return -1 * (self.low - self.close) * (self.open ** 5) / ((self.close - self.high) ** (self.close **５))
+
+    def alpha174(self):
+        return sumif(stddev(self.close, 20), 20, self.close > delay(self.close)) / 20.0
+
+    def alpha175(self):
+        return sma(cross_max(cross_max(self.high - self.low, np.abs(self.high - delay(self.close))), np.abs(delay(self.close) - self.low)), 6)
+
+    def alpha176(self):
+        return correlation(rank((self.close - ts_min(self.low, 12)) / (ts_max(self.high, 12) - ts_min(self.low, 12))), rank(self.volume), 6)
+
+    def alpha177(self):
+        return (20 - highday(self.high, 20) / 20) * 100
+
+    def alpha178(self):
+        return (self.close - delay(self.close)) / delay(self.close) * self.volume
+
+    def alpha179(self):
+        return rank(correlation(self.vwap, self.volume, 4)) * rank(correlation(rank(self.low), rank(sma(self.volume, 50)), 12))
+
+    def alpha180(self):
+        cond = sma(self.volume, 20) < self.volume
+        alpha = -1 *self.volume
+        alpha[cond] = -1 * ts_rank(np.abs(delta(self.close, 7)), 60) * sign(delta(self.close, 7))
+        return alpha
+
+    def alpha184(self):
+        return rank(correlation(delay(self.open - self.close), self.close, 200)) + rank(self.open - self.close)
+
+    def alpha185(self):
+        return rank(-1 * (1 - self.open / self.close) ** 2)
+
+    def alpha187(self):
+        alpha = cross_max(self.high - self.low, self.open - delay(self.open))
+        alpha[self.open <= delay(self.open)] = 0
+        return ts_sum(alpha, 20)
+
+    def alpha188(self):
+        return (self.high - self.low - sma(self.high - self.low, 11)) / sma(self.high - self.low, 11)
+
+    def alpha189(self):
+        return sma(np.abs(self.close - sma(self.close, 6)), 6)
+
+    def alpha191(self):
+        return correlation(sma(self.volume, 20), self.low, 5) + (self.high * 0.5 + self.low * 0.5 - self.close)
+
+
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 def load_data(data, prime_close):
     data['tradedate'] = data.tradedate.apply(str)
     data['tradedate'] = pd.DatetimeIndex(data.tradedate)
@@ -553,7 +881,7 @@ def standardize(factor):
     return factor_std
 
 
-def handle_factor(factor, prices, groupby, periods, path):
+def handle_factor(factor, prices, groupby, regression，periods, path):
     factor_format = format_factor(factor)
     prices_format = prices.ix[factor_format.index[0][0]:]
 
@@ -580,13 +908,54 @@ def handle_factor(factor, prices, groupby, periods, path):
     ic_summary_table["Ann. IR"] = (
         ic_standard.mean() / ic_standard.std()) * np.sqrt(252)
 
+<<<<<<< HEAD
     factor.to_excel(path + '\\prime_factor.xlsx')
     factor_data_standard.to_excel(path + '\\factor_data_standard.xlsx')
+=======
+    factor.to_hdf(path + '\\prime_factor.h5', 'table')
+    factor_data_standard.to_hdf(path + '\\factor_data_standard.h5', 'table')
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
     quantile_returns_mean_standard.to_excel(
         path + '\\quantile_returns_mean_standard.xlsx')
     ic_standard.to_excel(path + '\\ic_standard.xlsx')
     ic_summary_table.to_excel(path + '\\ic_summary_table.xlsx')
 
+<<<<<<< HEAD
+=======
+
+    regress_factor = regress_one(factor, regression)
+    factor_data_regress = alphalens.utils.get_clean_factor_and_forward_returns(format_factor(regress_factor),
+                                                                                prices_format,
+                                                                                periods=periods)
+
+    quantile_returns_mean_regress, quantile_returns_std_regress = alphalens.performance.mean_return_by_quantile(
+            factor_data_regress)
+
+    ic_regress = alphalens.performance.factor_information_coefficient(
+            factor_data_regress)
+
+
+    ic_summary_table_regress = pd.DataFrame()
+    ic_summary_table_regress["IC Mean"] = ic_regress.mean()
+    ic_summary_table_regress["IC Std."] = ic_regress.std()
+    t_stat, p_value = stats.ttest_1samp(ic_regress, 0)
+    ic_summary_table_regress["t-stat(IC)"] = t_stat
+    ic_summary_table_regress["p-value(IC)"] = p_value
+    ic_summary_table_regress["IC Skew"] = stats.skew(ic_regress)
+    ic_summary_table_regress["IC Kurtosis"] = stats.kurtosis(ic_regress)
+    ic_summary_table_regress["Ann. IR"] = (
+        ic_regress.mean() / ic_regress.std()) * np.sqrt(252)
+
+    factor_data_regress.to_hdf(path + '\\factor_data_regress.h5', 'table')
+    quantile_returns_mean_regress.to_excel(
+        path + '\\quantile_returns_mean_regress.xlsx')
+    ic_regress.to_excel(path + '\\ic_regress.xlsx')
+    ic_summary_table_regress.to_excel(path + '\\ic_summary_table_regress.xlsx')
+
+
+
+
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
     # factor performance in different group(by industry, size, value ...etc)
 
     def information_statistcs(ic):  # caculate ic_statitic use the daily ic data
@@ -652,7 +1021,11 @@ def handle_factor(factor, prices, groupby, periods, path):
         quantile_turnover_mean = pd.Panel(quantile_turnover).mean()
 
         # save data to excel
+<<<<<<< HEAD
         factor_data_key.to_excel(path + '\\factor_data_%s.xlsx' % key)
+=======
+        factor_data_key.to_hdf(path + '\\factor_data_%s.h5' % key, 'table')
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
         factor_returns.to_excel(path + '\\factor_returns_%s.xlsx' % key)
         quantile_returns_mean_key.to_excel(
             path + '\\quantile_returns_mean_%s.xlsx' % key)
@@ -660,6 +1033,19 @@ def handle_factor(factor, prices, groupby, periods, path):
         ic_table.to_excel(path + '\\ic_table_%s.xlsx' % key)
         quantile_turnover_mean.to_excel(
             path + '\\quantile_turnover_mean_%s.xlsx' % key)
+<<<<<<< HEAD
+=======
+
+    return ic_summary_table, ic_summary_table_regress
+
+
+def regress_one(y, x):
+    # 对单因子做回归
+    count = x.count(axis=1)
+    b = (count * (x * y).sum(axis=1) - x.sum(axis=1) *
+         y.sum(axis=1)) / (count * (x ** 2).sum(axis=1) - (x.sum(axis=1))**2)
+    return y - x.multiply(b, axis=0)
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 
 
 if __name__ == "__main__":
@@ -671,36 +1057,40 @@ if __name__ == "__main__":
     alpha_function = alpha_function[5:]
 
     # load price and volume data
-
-    data = pd.read_csv('/Users/liyizheng/data/daily_data/stock_data.csv')
-    data, pn_data = load_data(data)
+    pn_data = pd.read_hdf('D:\data\daily_data\\price_data.h5','table')
+    pn_data = dict(pn_data)
+    pn_data['mkt_value'] = pn_data['close'] * pn_data['total_shares']
     gtja = GtjaAlpha(pn_data)
 
     # get class signal by hs300 and zz500
-    hs300 = pd.read_csv(
-        '/Users/liyizheng/data/daily_data//hs300_component.csv', index_col=0)
-    zz500 = pd.read_csv(
-        '/Users/liyizheng/data/daily_data//zz500_component.csv', index_col=0)
+    hs300 = pd.read_csv('D:\data\daily_data\\hs300_component.csv',index_col=0)
+    zz500 = pd.read_csv('D:\data\daily_data\\zz500_component.csv',index_col=0)
     stock = [list(pn_data['volume'].columns) for i in range(hs300.shape[0])]
-    stock = pd.DataFrame(stock, index=hs300.index)
-    signal = pd.DataFrame(u'其余股票', index=stock.index,
-                          columns=pn_data['volume'].columns)
+    stock = pd.DataFrame(stock,index=hs300.index)
+    signal = pd.DataFrame(u'其余股票',index=stock.index,columns=pn_data['volume'].columns)
     for date in stock.index:
         hs300_td = hs300.ix[date]
         zz500_td = zz500.ix[date]
         stock_td = stock.ix[date]
-        signal.ix[date][set(hs300_td) & set(signal.columns)] = u'沪深300'
-        signal.ix[date][set(zz500_td) & set(signal.columns)] = u'中证500'
-
+        signal.ix[date][set(hs300_td)&set(signal.columns)] = u'沪深300'
+        signal.ix[date][set(zz500_td)&set(signal.columns)] = u'中证500'
     signal = format_factor(signal)
 
     groupby = dict()
     groupby['cap'] = signal
+    cap_regress = standardize(pn_data['mkt_value'])
 
     # set the period
     periods = [1, 3, 5, 10, 20, 30, 60]
+<<<<<<< HEAD
+=======
 
-    path = ''
+    path = 'E:\gtja_alpha'
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
+
+    ic_table = pd.DataFrame()
+
+    ic_table_cap = pd.DataFrame()
 
     # caculate alpha_data and analyse
     for alpha_name in alpha_function:
@@ -710,16 +1100,31 @@ if __name__ == "__main__":
 
             # cleaning and standardize alpha data
             alpha = alpha.replace([-np.inf, np.inf], np.nan)
-            alpha = winsorize(alpha)
+            #alpha = winsorize(alpha)
             alpha = standardize(alpha)
 
             if not os.path.exists(path + '\%s' % alpha_name):
                 os.mkdir(path + '\%s' % alpha_name)
 
+<<<<<<< HEAD
             handle_factor(alpha, gtja.close.copy(), groupby,
                           periods, path + '\%s' % alpha_name)
+=======
+            ic_summary_table, ic_summary_table_regress = handle_factor(alpha, gtja.close.copy(), groupby, cap_regress
+                          periods, path + '\%s' % alpha_name)
+            ic_summary_table['alpha_name'] = alpha_name
+            ic_summary_table_regress['alpha_name'] = alpha_name
+            ic_table = pd.concat([ic_table, ic_summary_table])
+            ic_table_cap = pd.concat([ic_table_cap, ic_summary_table_regress])
+
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
 
             del alpha
 
         except Exception as e:
             print e
+<<<<<<< HEAD
+=======
+    ic_table.to_csv('D:\data\daily_data\\ic_table.csv')
+    ic_table_cap.to_csv('D:\data\daily_data\\ic_table_cap.csv')
+>>>>>>> b387ddac37dde32fa9124b535b20bd8f8bf2a68f
