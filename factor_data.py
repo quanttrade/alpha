@@ -701,7 +701,11 @@ class GtjaAlpha(object):
         return rank(1.0 / self.close) * self.volume / sma(self.volume, 20) * (self.high *rank(self.high - self.close)) / (ts_sum(self.high, 5) / 5) - rank(self.vwap - delay(self.vwap))
 
     def alpha171(self):
+<<<<<<< HEAD
         return -1 * (self.low - self.close) * (self.open ** 5) / ((self.close - self.high) ** (self.close **５))
+=======
+        return -1 * ((self.low - self.close) * (self.open ** 5)) / ((self.close - self.high) * (self.close ** 5))
+>>>>>>> 9742071349da43c3acb6bd1f877092d1354dd952
 
     def alpha174(self):
         return sumif(stddev(self.close, 20), 20, self.close > delay(self.close)) / 20.0
@@ -842,7 +846,11 @@ def standardize(factor):
     return factor_std
 
 
+<<<<<<< HEAD
 def handle_factor(factor, prices, groupby, regression，periods, path):
+=======
+def handle_factor(factor, prices, groupby, regression, periods, path):
+>>>>>>> 9742071349da43c3acb6bd1f877092d1354dd952
     factor_format = format_factor(factor)
     prices_format = prices.ix[factor_format.index[0][0]:]
 
@@ -1049,7 +1057,11 @@ if __name__ == "__main__":
             if not os.path.exists(path + '\%s' % alpha_name):
                 os.mkdir(path + '\%s' % alpha_name)
 
+<<<<<<< HEAD
             ic_summary_table, ic_summary_table_regress = handle_factor(alpha, gtja.close.copy(), groupby, cap_regress
+=======
+            ic_summary_table, ic_summary_table_regress = handle_factor(alpha, gtja.close.copy(), groupby, cap_regress,
+>>>>>>> 9742071349da43c3acb6bd1f877092d1354dd952
                           periods, path + '\%s' % alpha_name)
             ic_summary_table['alpha_name'] = alpha_name
             ic_summary_table_regress['alpha_name'] = alpha_name

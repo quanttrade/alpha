@@ -239,8 +239,8 @@ class Alphas(object):
     #  alpha019:((-1 * sign(((close - delay(close, 7)) + delta(close, 7)))) *
 
     def alpha019(self):
-        return ((-1 * sign((self.close - delay(self.close, 7)) + \
-                delta(self.close, 7))) * (1 + rank(1 + ts_sum(self.returns, 250))))
+        return ((-1 * sign((self.close - delay(self.close, 7)) +
+                           delta(self.close, 7))) * (1 + rank(1 + ts_sum(self.returns, 250))))
 
     # alpha020: (((-1 * rank((open - delay(high, 1)))) * rank((open -
     # delay(close, 1)))) * rank((open -delay(low, 1))))
@@ -409,7 +409,7 @@ class Alphas(object):
     def alpha045(self):
         df = correlation(self.close, self.volume, 2)
         df = df.replace([-np.inf, np.inf], 0)
-        return -1 * (rank(sma(delay(self.close, 5), 20)) * df * \
+        return -1 * (rank(sma(delay(self.close, 5), 20)) * df *
                      rank(correlation(ts_sum(self.close, 5), ts_sum(self.close, 20), 2)))
 
     # alpha046: ((0.25 < (((delay(close, 20) - delay(close, 10)) / 10) - ((del
@@ -490,13 +490,11 @@ class Alphas(object):
                   scale(rank(ts_argmax(self.close, 10))))
 
 
-
 def beta(adjHigh, adjLow):
     beta_value = pd.DataFrame(index=adjHigh.index, columns=adjHigh.columns)
     for stock in adjHigh.columns:
-        b = pd.stats.ols.MovingOLS(y=adjHigh[stock], x=adjLow[stock], window_type='rolling', window=20, intercept=True).beta.x
+        b = pd.stats.ols.MovingOLS(y=adjHigh[stock], x=adjLow[
+                                   stock], window_type='rolling', window=20, intercept=True).beta.x
         beta_value[stock].ix[b.index] = b
     beta_value = beta_value.dropna(how='all', axis=1)
     return beta_value
-
-
