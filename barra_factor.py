@@ -87,7 +87,7 @@ def caculate_barra_factor(price_data, fundmental, public_date, benchmark_returns
     """
     return the barra factor based on USE4 and CNE5
 
-    paramas: 
+    paramas:
     ----------------------------
     price_data:  dict
     the price and volume based daily data of stock
@@ -129,7 +129,7 @@ def caculate_barra_factor(price_data, fundmental, public_date, benchmark_returns
 
         fundmental_daily.index = pd.DatetimeIndex(fundmental_daily.index)
 
-        
+
         fundmental_data[descriptor] = fundmental_daily
 
     # caculate BETA descriptor
@@ -394,7 +394,7 @@ def filter_stock_and_fillna(pn_data, close, N, groupby):
     the close of each stock
 
     N: int
-    the num we choose to filter 
+    the num we choose to filter
 
     groupby: dict
     the dict of the Series to classify the stock(the market value, industry etc)
@@ -417,7 +417,7 @@ def filter_stock_and_fillna(pn_data, close, N, groupby):
 
 
     df = pd.DataFrame()
-    
+
     for descriptor in pn_data.keys():
         df[descriptor] = pn_data[descriptor].stack(dropna=False)
 
@@ -457,28 +457,39 @@ def caculate_factor_returns(barra_factor, industry, price_data):
         barra_factor[hangye] = industry[hangye]
 
     volume = price_data['volume']
-    returns = price_data['adjclose'].pct_change()
-    cap = price_data['close'] * price_data['free_float_shares']
-    
-    tradedate = barra_factor.index.get_level_values('date')
+    returns = price_data['adjclose'].pct_change(1).shift(-1)
+    cap = price_data['close'] * price_data['total_shares']
+
+    tradedate = barra_factor.index.get_level_values('tradedate')
     tradedate = list(set(tradedate))
     tradedate.sort()
-    
+    #tradedate_M = [tradedate[i] for i in range(1,len(tradedate),21)]
+
     factor_returns = pd.DataFrame(index=tradedate, columns=barra_factor.columns)
-    choose = u'综合'
+    choose = u'有色金属'
 
-    industry_key = list(industry.keys())
+    rsquare = pd.Series(index=tradedate)
+    benchmark_returns  = pd.Series(index=tradedate)
+    for date in tradedate[:-1]:
 
-    for date in tradedate:
-        
-        #choose the stock tradable 
+        print date
+
+        #choose the stock tradable
         volume_t = volume.ix[date]
         factor = barra_factor.ix[date]
         returns_t = returns.ix[date]
-        factor = factor[volume_t > 0].copy()
+        factor = factor[volume_t > 0]
+        factor = factor.replace([0],np.nan)
+        factor = factor.dropna(how='all',axis=1)
+        factor = factor.fillna(0)
 
         returns_t = returns_t.ix[factor.index]
         cap_t = cap.ix[date].ix[factor.index]
+        industry_key  = factor.columns[10:-1]
+        benchmark_return = np.average(returns_t, weights=cap_t)
+        benchmark_returns.ix[date] = benchmark_return
+
+
 
         #caculate the cap of every industry
         industry_set = factor[industry_key]
@@ -488,16 +499,16 @@ def caculate_factor_returns(barra_factor, industry, price_data):
             industry_components = industry_components[factor.index]
             industry_cap[industry_name] = cap_t[industry_components == 1].sum()
 
-        #change the factor loading to satisfy w1 * f1 + w2 * f2 + ... wn * fn = 0, wi, fi are industry cap and industry returns 
-     
+        #change the factor loading to satisfy w1 * f1 + w2 * f2 + ... wn * fn = 0, wi, fi are industry cap and industry returns
+
         for name in industry_key:
             if name != choose:
                 factor[name] = factor[name] - industry_cap[name] / industry_cap[choose] * factor[choose]
         del factor[choose]
 
 
-        model = sm.WLS(returns_t.dropna(),  factor.dropna(), weights= 1.0 / cap_t.dropna())
-        
+        model = sm.WLS(returns_t.dropna(), factor.dropna(), weights=cap_t)
+
         try:
             res = model.fit()
             beta = res.params.copy()
@@ -508,6 +519,7 @@ def caculate_factor_returns(barra_factor, industry, price_data):
                     sum_ret += industry_cap[name] * beta[name]
             beta[choose] = -1 * sum_ret / industry_cap[choose]
             factor_returns.ix[date] = beta
+            rsquare.ix[date] = res.rsquared_adj
 
         except Exception as e:
             print e
@@ -520,28 +532,7 @@ if __name__ == "__main__":
     #laoding data
 
     barra_factor = pd.read_hdf('/Users/liyizheng/data/daily_data/barra_factor.h5','table')
-    data = pd.read_hdf('/Users/liyizheng/data/stockdata/data.h5','table') 
+    data = pd.read_hdf('/Users/liyizheng/data/stockdata/data.h5','table')
     prime_close = pd.read_csv('/Users/liyizheng/data/stockdata/prime_close.csv',index_col=0)
     prime_close.index = pd.DatetimeIndex(prime_close.index)
     price_data = load_data(data, prime_close)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
