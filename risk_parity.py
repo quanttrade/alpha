@@ -3,7 +3,7 @@ import numpy as np
 from cvxpy import *
 
 
-    
+
 
 
 def get_smart_weight(cov_mat, method='min variance', wts_adjusted=False):
@@ -17,35 +17,35 @@ def get_smart_weight(cov_mat, method='min variance', wts_adjusted=False):
     PS:
         依赖scipy package
     '''
-    
+
     if not isinstance(cov_mat, pd.DataFrame):
         raise ValueError('cov_mat should be pandas DataFrame！')
-        
+
     omega = np.matrix(cov_mat.values)  # 协方差矩阵
-    
+
     # 定义目标函数
     def fun1(x):
         return np.matrix(x) * omega * np.matrix(x).T
-    
+
     def fun2(x):
         tmp = (omega * np.matrix(x).T).A1
         risk = x * tmp
         delta_risk = [sum((i - risk)**2) for i in risk]
         return sum(delta_risk)
-    
+
     def fun3(x):
         den = x * omega.diagonal().T
         num = np.sqrt(np.matrix(x) * omega * np.matrix(x).T)
         return num/den
-    
-    # 初始值 + 约束条件 
-    x0 = np.ones(omega.shape[0]) / omega.shape[0]  
+
+    # 初始值 + 约束条件
+    x0 = np.ones(omega.shape[0]) / omega.shape[0]
     bnds = tuple((0,None) for x in x0)
     cons = ({'type':'eq', 'fun': lambda x: sum(x) - 1})
     options={'disp':False, 'maxiter':1000, 'ftol':1e-20}
-        
-    if method == 'min variance':   
-        res = minimize(fun1, x0, bounds=bnds, constraints=cons, method='SLSQP', options=options) 
+
+    if method == 'min variance':
+        res = minimize(fun1, x0, bounds=bnds, constraints=cons, method='SLSQP', options=options)
     elif method == 'risk parity':
         res = minimize(fun2, x0, bounds=bnds, constraints=cons, method='SLSQP', options=options)
     elif method == 'max diversification':
@@ -54,7 +54,7 @@ def get_smart_weight(cov_mat, method='min variance', wts_adjusted=False):
         return pd.Series(index=cov_mat.index, data=1.0 / cov_mat.shape[0])
     else:
         raise ValueError('method should be min variance/risk parity/max diversification/equal weight！！！')
-        
+
     # 权重调整
     if res['success'] == False:
         # print res['message']
@@ -67,8 +67,8 @@ def get_smart_weight(cov_mat, method='min variance', wts_adjusted=False):
         return wts
     else:
         raise ValueError('wts_adjusted should be True/False！')
-        
-        
+
+
 
 def risk_parity(df, epsilon):
     n = df.shape[1]
@@ -87,7 +87,7 @@ def risk_parity(df, epsilon):
     return y_old
 
 
-        
+
 def F(y, Sigma):
     x = y[: -1]
     Lambda = y[-1]
@@ -120,8 +120,9 @@ def func(x, Sigma):
             TRCj = x[j] *((Sigma.dot(x))[j])
             f += (TRCi - TRCj) ** 2
     return f
+    
 
-     return fdef func(x, Sigma):
+def func(x, Sigma):
     n = Sigma.shape[0]
     f = 0.0
     for i in range(n):
