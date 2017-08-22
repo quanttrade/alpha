@@ -1,0 +1,25 @@
+from barra_factor import *
+
+
+def alpha_corr_mean(alpha_value):
+    alpha_name = alpha_value.keys()
+    alpha_name.sort()
+
+    alpha_corr = pd.DataFrame(0, index=alpha_name, columns=alpha_name)
+
+    N = len(alpha_name)
+
+    for i in range(N):
+        for j in range(i + 1):
+            if i  == j:
+                alpha_corr[i, j] =1
+            else:
+                alpha_corr.loc[i, j] = alpha_value[alpha_name[i]].corrwith(alpha_value[alpha_name[j]], axis=1)
+
+    for i range(N):
+        for j in range(i + 1, N):
+            alpha_corr.loc[i, j] = alpha_corr[j, i]
+
+
+def alpha_delete(alpha_corr, alpha_IR):
+    
