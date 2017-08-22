@@ -182,8 +182,6 @@ def neutralize(alpha, factor_list):
     alpha_neutral = pd.DataFrame({}, index=alpha.index, columns=alpha.columns)
 
     for date in alpha.index:
-        print date
-
         # togather the data itoday into one dataframe
 
 
