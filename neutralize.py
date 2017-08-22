@@ -1,7 +1,7 @@
 from barra_factor import *
 import os
 import alphalens
-
+from scipy import stats
 
 
 if __name__ == '__main__':
@@ -31,11 +31,11 @@ if __name__ == '__main__':
                 neutralized_factor_data)
 
         ic_standard = alphalens.performance.factor_information_coefficient(
-                factor_data_neutralize)
+                neutralized_factor_data)
 
         turnover_periods = alphalens.utils.get_forward_returns_columns(
-                    factor_data_neutralize.columns)
-        quantile_factor = factor_data_neutralize['factor_quantile']
+                    neutralized_factor_data.columns)
+        quantile_factor = neutralized_factor_data['factor_quantile']
 
         quantile_turnover = {p: pd.concat([alphalens.performance.quantile_turnover(
                 quantile_factor, q, p) for q in range(1, int(quantile_factor.max()) + 1)],
