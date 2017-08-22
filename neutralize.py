@@ -17,7 +17,7 @@ if __name__ == '__main__':
         path = os.path.join(gtja_path, alpha_name)
         prime_factor = pd.read_hdf(path + '\\prime_factor.h5', 'table')
         prime_factor_standard = standardize(winsorize(prime_factor, mad_method))
-        neutralized_factor = neutralize(prime_factor_standard, barra_factor.ix[:,:-1])
+        neutralized_factor = neutralize(prime_factor_standard.ix['2007-01-31':], barra_factor.ix[:,:-1])
         neutralized_factor.to_hdf(path + '\\neutralize_factor.h5', 'table')
 
 
@@ -31,7 +31,18 @@ if __name__ == '__main__':
                 neutralized_factor_data)
 
         ic_standard = alphalens.performance.factor_information_coefficient(
-                factor_data_standard)
+                factor_data_neutralize)
+
+        turnover_periods = alphalens.utils.get_forward_returns_columns(
+                    factor_data_neutralize.columns)
+        quantile_factor = factor_data_neutralize['factor_quantile']
+
+        quantile_turnover = {p: pd.concat([alphalens.performance.quantile_turnover(
+                quantile_factor, q, p) for q in range(1, int(quantile_factor.max()) + 1)],
+                axis=1)
+                for p in turnover_periods}
+
+        quantile_turnover_mean = pd.Panel(quantile_turnover).mean()
 
         ic_summary_table = pd.DataFrame()
         ic_summary_table["IC Mean"] = ic_standard.mean()
@@ -52,5 +63,7 @@ if __name__ == '__main__':
             path + '\\quantile_returns_mean_neutralize.xlsx')
         ic_standard.to_excel(path + '\\ic_neutralize.xlsx')
         ic_summary_table.to_excel(path + '\\ic_summary_table_neutralize.xlsx')
+        quantile_turnover_mean.to_excel(
+            path + '\\quantile_turnover_mean_neutralize.xlsx')
 
 ic_table_neutralize.to_csv('D:\data\daily_data\\ic_table_neutralize.csv')
