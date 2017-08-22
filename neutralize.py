@@ -15,6 +15,7 @@ if __name__ == '__main__':
     for alpha_name in alpha_dir:
         try:
             print alpha_name
+            print "============================================"
             path = os.path.join(gtja_path, alpha_name)
             prime_factor = pd.read_hdf(path + '\\prime_factor.h5', 'table')
             prime_factor_standard = standardize(winsorize(prime_factor, mad_method))
@@ -66,7 +67,7 @@ if __name__ == '__main__':
                 ic_summary_table.to_excel(path + '\\ic_summary_table_neutralize.xlsx')
                 quantile_turnover_mean.to_excel(
                 path + '\\quantile_turnover_mean_neutralize.xlsx')
-                
+
         except Exception as e:
             print e
             continue
