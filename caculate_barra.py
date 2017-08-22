@@ -34,11 +34,11 @@ if __name__ == "__main__":
 
     # Liquidity
     pn_data['STOM'] = np.log((price_data['volume'] / price_data['free_float_shares']
-                             ).rolling(21).sum()).replace([-np.inf, np.inf], np.nan).stack()
+                             ).rolling(21).sum()).replace([-np.inf, np.inf], 0).stack()
     pn_data['STOQ'] = np.log(1 / 3.0 * (price_data['volume'] / price_data[
-                             'free_float_shares']).rolling(63).sum()).replace([-np.inf, np.inf], np.nan).stack()
+                             'free_float_shares']).rolling(63).sum()).replace([-np.inf, np.inf], 0).stack()
     pn_data['STOA'] = np.log(1 / 12.0 * (price_data['volume'] / price_data[
-                             'free_float_shares']).rolling(242).sum()).replace([-np.inf, np.inf], np.nan).stack()
+                             'free_float_shares']).rolling(242).sum()).replace([-np.inf, np.inf], 0).stack()
 
     # Beta
     pct_change = price_data['adjclose'].pct_change()

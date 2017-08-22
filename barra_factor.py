@@ -49,10 +49,9 @@ def load_data(data, prime_close):
                      columns='secid',
                      values='amt')
 
-
     free_float_shares = data.pivot(index='tradedate',
-                              columns='secid',
-                              values='free_float_shares')
+                                   columns='secid',
+                                   values='free_float_shares')
 
     adjfactor = prime_close / close
 
@@ -73,14 +72,11 @@ def load_data(data, prime_close):
     pn_data['adjvwap'] = vwap
     pn_data['amt'] = amt
 
-
-    return  pn_data
+    return pn_data
 
 
 def fillna_issuingdate(issuingdate):
     pass
-
-
 
 
 def caculate_barra_factor(price_data, fundmental, public_date, benchmark_returns):
@@ -126,9 +122,7 @@ def caculate_barra_factor(price_data, fundmental, public_date, benchmark_returns
                 to_fill[public_date[stk].ix[date]:] = temp.ix[date]
             fundmental_daily[stk] = to_fill
 
-
         fundmental_daily.index = pd.DatetimeIndex(fundmental_daily.index)
-
 
         fundmental_data[descriptor] = fundmental_daily
 
@@ -207,13 +201,11 @@ def caculate_barra_factor(price_data, fundmental, public_date, benchmark_returns
     pn_data['STOQ'] = np.log(np.exp(stom).rolling(3).mean())
     pn_data['STOA'] = np.log(np.exp(stom).rolling(12).mean())
 
-    #winsorize and standardize the descriptor
+    # winsorize and standardize the descriptor
     for descriptor in pn_data.keys():
         pn_data[descriptor] = pn_data[descriptor].ix['2007-03-30':]
         pn_data[descriptor] = standardize(
             winsorize(pn_data[descriptor].copy(), boxplot))
-
-
 
     # caculate Barra risk factor
     barra_factor['Beta'] = pn_data['BETA']
@@ -221,7 +213,7 @@ def caculate_barra_factor(price_data, fundmental, public_date, benchmark_returns
     barra_factor['Size'] = pn_data['LNCAP']
     barra_factor['NLSIZE'] = pn_data['NLSIZE']
     barra_factor['Earnings Yield'] = descriptor2factor([0.68 * pn_data['EPIBS'],
-                                                       0.11 * pn_data['ETOP'], 0.21 * pn_data['CETOP']])
+                                                        0.11 * pn_data['ETOP'], 0.21 * pn_data['CETOP']])
     barra_factor['Volatiliy'] = descriptor2factor(
         [0.74 * pn_data['DASTD'], 0.16 * pn_data['CMRA'], 0.1 * pn_data['HSIGMA']])
     barra_factor['Growth'] = descriptor2factor(
@@ -231,7 +223,6 @@ def caculate_barra_factor(price_data, fundmental, public_date, benchmark_returns
         [0.38 * pn_data['MLEV'], 0.35 * pn_data['DTOA'], 0.27 * pn_data['BLEV']])
     barra_factor['Liquidity'] = descriptor2factor(
         [0.35 * pn_data['STOM'], 0.35 * pn_data['STOQ'], 0.30 * pn_data['STOA']])
-
 
 
 #winsorize and standardize
@@ -267,7 +258,7 @@ def winsorize(factor, winsorize_series):
 
 
 def standardize(factor):
-    #return the standardized factor
+    # return the standardized factor
     factor = factor.dropna(how='all')
     factor_std = ((factor.T - factor.mean(axis=1)) / factor.std(axis=1)).T
     return factor_std
@@ -275,14 +266,13 @@ def standardize(factor):
 
 def standardize_cap(factor, cap):
     # average factor by cap
-    factor_use = factor.copy()
+    factor_cap = factor.copy()
     for date in factor.index:
-        factor_t = factor_use.ix[date].dropna()
+        factor_t = factor_cap.ix[date].dropna()
         cap_t = cap.ix[date].ix[factor_t.index]
-        factor_cap = np.average(factor_t, weights=cap_t)
-        factor_use.ix[date] = factor_cap
-    return factor_use
-
+        factor_cap_average = np.average(factor_t, weights=cap_t)
+        factor_cap.ix[date] = (factor_cap.ix[date] - factor_cap_average) / factor_t.std()
+    return factor_cap
 
 
 # caculate beta value
@@ -293,15 +283,16 @@ def beta_value(pct_change, benchmark_returns):
                        index=pct_change.index)
     pct_change_weight = pct_change.multiply(weight, axis=0)
     benchmark_returns_weight = benchmark_returns.multiply(weight, axis=0)
-    beta = pd.DataFrame({},index=pct_change.index, columns=pct_change.columns)
-    resid = pd.DataFrame({},index=pct_change.index, columns=pct_change.columns)
+    beta = pd.DataFrame({}, index=pct_change.index, columns=pct_change.columns)
+    resid = pd.DataFrame({}, index=pct_change.index,
+                         columns=pct_change.columns)
 
     for stk in pct_change.columns:
         try:
             ols = pd.stats.ols.MovingOLS(y=pct_change_weight[stk],
-                                     x=benchmark_returns_weight,
-                                     window=250,
-                                     intercept=True)
+                                         x=benchmark_returns_weight,
+                                         window=250,
+                                         intercept=True)
 
             beta[stk].ix[ols.beta.x.index] = ols.beta.x
             resid[stk].ix[ols.resid.index] = ols.resid
@@ -311,7 +302,7 @@ def beta_value(pct_change, benchmark_returns):
             beta[stk] = np.NaN
             beta[stk] = np.NaN
 
-    return beta,resid
+    return beta, resid
 
 
 def descriptor2factor(descriptor_list):
@@ -334,8 +325,17 @@ def neutralize(alpha, factor_list):
     factor_list: list
     the factor used to regress alpha
     """
-    for factor in factor_list:
-        diff = set(alpha.index) - set(factor.index)
+
+    if isinstance(factor_list, list):
+        for factor in factor_list:
+            diff = set(alpha.index) - set(factor.index)
+            if len(diff) > 0:
+                raise NonMatchingTimezoneError(
+                    "The timezone of '%s' is not the same as the timezone of 'alpha'." % factor)
+
+    if isinstance(factor_list, pd.DataFrame):
+        diff = set(alpha.index) - \
+            set(factor_list.index.get_level_values('tradedate'))
         if len(diff) > 0:
             raise NonMatchingTimezoneError(
                 "The timezone of '%s' is not the same as the timezone of 'alpha'." % factor)
@@ -345,8 +345,12 @@ def neutralize(alpha, factor_list):
     for date in alpha.index:
 
         # togather the data itoday into one dataframe
-        join_factor = reduce(lambda x, y: pd.concat([x, y]), [
-                             factor.ix[date].dropna() for factor in factor_list])
+        if isinstance(factor_list, list):
+            join_factor = reduce(lambda x, y: pd.concat([x, y], axis=1), [
+                factor.ix[date].dropna() for factor in factor_list])
+        if isinstance(factor_list, pd.DataFrame):
+            join_factor = factor_list.ix[date]
+
         alpha_date = alpha.ix[date].dropna()
 
         # do the ols
@@ -415,7 +419,6 @@ def filter_stock_and_fillna(pn_data, close, N, groupby):
         group_df[filter_universe == 1] = np.NaN
         groupby[group] = group_df
 
-
     df = pd.DataFrame()
 
     for descriptor in pn_data.keys():
@@ -450,11 +453,7 @@ def industry_factor(hangye_class):
     return hangye_dict
 
 
-
-def caculate_factor_returns(barra_factor, industry, price_data):
-
-    for hangye in industry.keys():
-        barra_factor[hangye] = industry[hangye]
+def caculate_factor_returns(barra_factor,  price_data):
 
     volume = price_data['volume']
     returns = price_data['adjclose'].pct_change(1).shift(-1)
@@ -465,33 +464,30 @@ def caculate_factor_returns(barra_factor, industry, price_data):
     tradedate.sort()
     #tradedate_M = [tradedate[i] for i in range(1,len(tradedate),21)]
 
-    factor_returns = pd.DataFrame(index=tradedate, columns=barra_factor.columns)
+    factor_returns = pd.DataFrame(
+        index=tradedate, columns=barra_factor.columns)
     choose = u'有色金属'
 
     rsquare = pd.Series(index=tradedate)
-    benchmark_returns  = pd.Series(index=tradedate)
+
     for date in tradedate[:-1]:
 
         print date
 
-        #choose the stock tradable
+        # choose the stock tradable
         volume_t = volume.ix[date]
         factor = barra_factor.ix[date]
         returns_t = returns.ix[date]
         factor = factor[volume_t > 0]
-        factor = factor.replace([0],np.nan)
-        factor = factor.dropna(how='all',axis=1)
+        factor = factor.replace([0], np.nan)
+        factor = factor.dropna(how='all', axis=1)
         factor = factor.fillna(0)
 
         returns_t = returns_t.ix[factor.index]
         cap_t = cap.ix[date].ix[factor.index]
-        industry_key  = factor.columns[10:-1]
-        benchmark_return = np.average(returns_t, weights=cap_t)
-        benchmark_returns.ix[date] = benchmark_return
+        industry_key = factor.columns[10:-1]
 
-
-
-        #caculate the cap of every industry
+        # caculate the cap of every industry
         industry_set = factor[industry_key]
         industry_cap = pd.Series()
         for industry_name in industry_set.columns:
@@ -499,14 +495,16 @@ def caculate_factor_returns(barra_factor, industry, price_data):
             industry_components = industry_components[factor.index]
             industry_cap[industry_name] = cap_t[industry_components == 1].sum()
 
-        #change the factor loading to satisfy w1 * f1 + w2 * f2 + ... wn * fn = 0, wi, fi are industry cap and industry returns
+        # change the factor loading to satisfy w1 * f1 + w2 * f2 + ... wn * fn
+        # = 0, wi, fi are industry cap and industry returns
 
         for name in industry_key:
             if name != choose:
-                factor[name] = factor[name] - industry_cap[name] / industry_cap[choose] * factor[choose]
+                factor[name] = factor[name] - industry_cap[name] / \
+                    industry_cap[choose] * factor[choose]
         del factor[choose]
 
-
+        # weighted regression to caculate the returns of each factor
         model = sm.WLS(returns_t.dropna(), factor.dropna(), weights=cap_t)
 
         try:
@@ -524,15 +522,17 @@ def caculate_factor_returns(barra_factor, industry, price_data):
         except Exception as e:
             print e
             factor_returns.ix[date] = 0.0
-
+    return factor_returns, resid
 
 
 if __name__ == "__main__":
 
-    #laoding data
+    # laoding data
 
-    barra_factor = pd.read_hdf('/Users/liyizheng/data/daily_data/barra_factor.h5','table')
-    data = pd.read_hdf('/Users/liyizheng/data/stockdata/data.h5','table')
-    prime_close = pd.read_csv('/Users/liyizheng/data/stockdata/prime_close.csv',index_col=0)
+    barra_factor = pd.read_hdf(
+        '/Users/liyizheng/data/daily_data/barra_factor.h5', 'table')
+    data = pd.read_hdf('/Users/liyizheng/data/stockdata/data.h5', 'table')
+    prime_close = pd.read_csv(
+        '/Users/liyizheng/data/stockdata/prime_close.csv', index_col=0)
     prime_close.index = pd.DatetimeIndex(prime_close.index)
     price_data = load_data(data, prime_close)
