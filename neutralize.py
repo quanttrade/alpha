@@ -7,16 +7,17 @@ import alphalens
 if __name__ == '__main__':
     gtja_path = 'E:\gtja_alpha'
     alpha_dir = os.listdir(gtja_path)
-    barra_factor = pd.read_hdf('')
+    barra_factor = pd.read_hdf('D:data/daily_data/barra_factor_cap.h5','barra_factor')
     price_data = pd.read_hdf('D:\data\daily_data\\price_data.h5','table')
     ic_table_neutralize = pd.DataFrame()
 
 
     for alpha_name in alpha_dir:
+        print alpha_name
         path = os.path.join(gtja_path, alpha_name)
         prime_factor = pd.read_hdf(path + '\\prime_factor.h5', 'table')
-        prime_factor_standard = standardize_cap(winsorize(prime_factor, mad_method))
-        neutralized_factor = neutralize(prime_factor_standard, barra_factor)
+        prime_factor_standard = standardize(winsorize(prime_factor, mad_method))
+        neutralized_factor = neutralize(prime_factor_standard, barra_factor.ix[:,:-1])
         neutralized_factor.to_hdf(path + '\\neutralize_factor.h5', 'table')
 
 
@@ -43,9 +44,13 @@ if __name__ == '__main__':
         ic_summary_table["Ann. IR"] = (
             ic_standard.mean() / ic_standard.std()) * np.sqrt(252)
 
+        ic_table_neutralize = pd.concat([ic_table_neutralize, ic_summary_table])
+
 
         neutralized_factor_data.to_hdf(path + '\\factor_data_neutralize.h5', 'table')
         quantile_returns_mean_standard.to_excel(
             path + '\\quantile_returns_mean_neutralize.xlsx')
         ic_standard.to_excel(path + '\\ic_neutralize.xlsx')
         ic_summary_table.to_excel(path + '\\ic_summary_table_neutralize.xlsx')
+
+ic_table_neutralize.to_csv('D:\data\daily_data\\ic_table_neutralize.csv')

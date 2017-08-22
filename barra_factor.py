@@ -75,156 +75,6 @@ def load_data(data, prime_close):
     return pn_data
 
 
-def fillna_issuingdate(issuingdate):
-    pass
-
-
-def caculate_barra_factor(price_data, fundmental, public_date, benchmark_returns):
-    """
-    return the barra factor based on USE4 and CNE5
-
-    paramas:
-    ----------------------------
-    price_data:  dict
-    the price and volume based daily data of stock
-
-    fundmental: DataFrame
-    the fundmental data of stock , update per quarter
-
-    benchmark_returns: Series
-    the returns series of benchmark
-
-    """
-
-    # define fundmental data and descriptor data dict
-    fundmental_data = dict()
-    pn_data = dict()
-    barra_factor = dict()
-
-    # release data from fundmental
-    for descriptor in fundmental.columns:
-        if descriptor not in ['TRADE_DATE', 'SECID']:
-            fundmental_data[descriptor] = fundmental.pivot(
-                index='TRADE_DATE', columns='SECID', values=descriptor)
-
-    # transfer quarter fundmental data into daily form
-    public_date.index = pd.DatetimeIndex(public_date.index)
-    for descriptor in fundmental_data.keys():
-        fundmental_daily = pd.DataFrame(index=price_data['close'][fundmental_data[descriptor].index[0]:].index,
-                                        columns=price_data['close'].columns)
-        fundmental_quarter = fundmental_data[
-            descriptor].copy()[fundmental_daily.columns]
-
-        for stk in fundmental_daily.columns:
-            temp = fundmental_quarter[stk]
-            to_fill = fundmental_daily[stk].copy()
-            for date in temp.index:
-                to_fill[public_date[stk].ix[date]:] = temp.ix[date]
-            fundmental_daily[stk] = to_fill
-
-        fundmental_daily.index = pd.DatetimeIndex(fundmental_daily.index)
-
-        fundmental_data[descriptor] = fundmental_daily
-
-    # caculate BETA descriptor
-    pct_change = price_data['adjclose'].pct_change()
-    beta, resid = beta_value(pct_change, benchmark_returns)
-    pn_data['BETA'] = beta
-
-    # caculate Momentum descriptor
-    Lambda_120 = np.power(0.5, 1.0 / 120.0)
-    weight_120 = np.array([Lambda_120 ** (503 - i) for i in range(504)])
-    momentum = pct_change.rolling(504 + 21).apply(lambda x: np.average(
-        np.log(1 + x[21:]), weights=weight_120, axis=0))
-    pn_data['RSTR'] = momentum
-
-    # caculate SIZE descriptor
-    fundmental_data['MKT_CAP_ARD'] = price_data[
-        'close'] * price_data['total_shares']
-    pn_data['LNCAP'] = np.log(fundmental_data['MKT_CAP_ARD'])
-
-    # caculate NLSIZE descriptor
-    standardize_cap = standardize(winsorize(pn_data['LNCAP'].copy(), boxplot))
-    cap_cube = standardize_cap ** 3
-    count = standardize_cap.count(axis=1)
-    b = (count * (standardize_cap * cap_cube).sum(axis=1) - standardize_cap.sum(axis=1) *
-         cap_cube.sum(axis=1)) / (count * (standardize_cap ** 2).sum(axis=1) - (standardize_cap.sum(axis=1))**2)
-    pn_data['NLSIZE'] = cap_cube - standardize_cap.multiply(b, axis=0)
-
-    # caculate Earnings Yield descriptor
-    pn_data['EPIBS'] = fundmental_data[
-        'WEST_NETPROFIT_FTM'] / fundmental_data['MKT_CAP_ARD']
-    pn_data['ETOP'] = fundmental_data[
-        'PROFIT_TTM'] / fundmental_data['MKT_CAP_ARD']
-    pn_data['CETOP'] = fundmental_data[
-        'OPERATECASHFLOW_TTM'] / fundmental_data['MKT_CAP_ARD']
-
-    # caculate Volatility descriptor
-    Lambda_40 = np.power(0.5, 1 / 40.0)
-    weight_40 = np.array([Lambda_40 ** (249 - i) for i in range(250)])
-    pct_change = price_data['adjclose'].pct_change()
-    pn_data['DASTD'] = pct_change.rolling(250).apply(
-        lambda x: np.average((x - x.mean(axis=0)) ** 2, weights=weight_40, axis=0))
-
-    pct_21 = price_data['adjclose'].pct_change(21)
-    pn_data['CMRA'] = np.log(pct_21.rolling(
-        252).max() + 1) - np.log(pct_21.rolling(252).min() + 1)
-
-    Lambda_60 = np.power(0.5, 1 / 60.0)
-    weight = pd.Series([Lambda_60 ** (pct_change.shape[0] - i - 1) for i in range(pct_change.shape[0])],
-                       index=pct_change.index)
-    hsigma = resid.divide(weight, axis=0).rolling(250).std()
-    pn_data['HSIGMA'] = hsigma
-
-    # caculate Growth descriptor
-    pn_data['SGRO'] = fundmental_data['GROWTH_GR']
-    pn_data['EGRO'] = fundmental_data['GROWTH_NETPROFIT']
-    pn_data['EGIB'] = fundmental_data['WEST_NETPROFIT_CAGR']
-    pn_data['EGIB_S'] = fundmental_data['WEST_AVGNP_YOY']
-
-    # caculate Value descriptor
-    pn_data['BTOP'] = fundmental_data[
-        'EQUITY_MRQ'] / fundmental_data['MKT_CAP_ARD']
-
-    # caculate Leverge descriptor
-    pn_data['MLEV'] = (fundmental_data['MKT_CAP_ARD'] +
-                       fundmental_data['WGSD_DEBT_LT']) / fundmental_data['MKT_CAP_ARD']
-    pn_data['DTOA'] = fundmental_data[
-        'WGSD_LIABS'] / fundmental_data['WGSD_ASSETS']
-    pn_data['BLEV'] = (fundmental_data['EQUITY_MRQ'] +
-                       fundmental_data['WGSD_DEBT_LT']) / fundmental_data['EQUITY_MRQ']
-
-    # caculate Liquidity descriptor
-    stom = np.log(
-        (price_data['volume'] / price_data['free_float_shares']).rolling(21).sum())
-    pn_data['STOM'] = stom
-    pn_data['STOQ'] = np.log(np.exp(stom).rolling(3).mean())
-    pn_data['STOA'] = np.log(np.exp(stom).rolling(12).mean())
-
-    # winsorize and standardize the descriptor
-    for descriptor in pn_data.keys():
-        pn_data[descriptor] = pn_data[descriptor].ix['2007-03-30':]
-        pn_data[descriptor] = standardize(
-            winsorize(pn_data[descriptor].copy(), boxplot))
-
-    # caculate Barra risk factor
-    barra_factor['Beta'] = pn_data['BETA']
-    barra_factor['Momentum'] = pn_data['RSTR']
-    barra_factor['Size'] = pn_data['LNCAP']
-    barra_factor['NLSIZE'] = pn_data['NLSIZE']
-    barra_factor['Earnings Yield'] = descriptor2factor([0.68 * pn_data['EPIBS'],
-                                                        0.11 * pn_data['ETOP'], 0.21 * pn_data['CETOP']])
-    barra_factor['Volatiliy'] = descriptor2factor(
-        [0.74 * pn_data['DASTD'], 0.16 * pn_data['CMRA'], 0.1 * pn_data['HSIGMA']])
-    barra_factor['Growth'] = descriptor2factor(
-        [0.18 * pn_data['EGIB'], 0.11 * pn_data['EGIB_S'], 0.24 * pn_data['EGRO'], 0.47 * pn_data['SGRO']])
-    barra_factor['Value'] = pn_data['BTOP']
-    barra_factor['Leverge'] = descriptor2factor(
-        [0.38 * pn_data['MLEV'], 0.35 * pn_data['DTOA'], 0.27 * pn_data['BLEV']])
-    barra_factor['Liquidity'] = descriptor2factor(
-        [0.35 * pn_data['STOM'], 0.35 * pn_data['STOQ'], 0.30 * pn_data['STOA']])
-
-
 #winsorize and standardize
 def mad_method(se):
     median = se.quantile(0.5)
@@ -326,40 +176,36 @@ def neutralize(alpha, factor_list):
     the factor used to regress alpha
     """
 
-    if isinstance(factor_list, list):
-        for factor in factor_list:
-            diff = set(alpha.index) - set(factor.index)
-            if len(diff) > 0:
-                raise NonMatchingTimezoneError(
-                    "The timezone of '%s' is not the same as the timezone of 'alpha'." % factor)
 
-    if isinstance(factor_list, pd.DataFrame):
-        diff = set(alpha.index) - \
-            set(factor_list.index.get_level_values('tradedate'))
-        if len(diff) > 0:
-            raise NonMatchingTimezoneError(
-                "The timezone of '%s' is not the same as the timezone of 'alpha'." % factor)
+
 
     alpha_neutral = pd.DataFrame({}, index=alpha.index, columns=alpha.columns)
 
     for date in alpha.index:
+        print date
 
         # togather the data itoday into one dataframe
-        if isinstance(factor_list, list):
-            join_factor = reduce(lambda x, y: pd.concat([x, y], axis=1), [
-                factor.ix[date].dropna() for factor in factor_list])
-        if isinstance(factor_list, pd.DataFrame):
-            join_factor = factor_list.ix[date]
 
-        alpha_date = alpha.ix[date].dropna()
+
+        factor = factor_list.ix[date]
+
+        factor = factor.replace([0], np.nan)
+        factor = factor.dropna(how='all', axis=1)
+        factor = factor.fillna(0)
+
+
+        alpha_date = alpha.ix[date].ix[factor.index]
+        alpha_date = alpha_date.fillna(value=alpha_date.quantile())
+
 
         # do the ols
-        model = sm.OLS(alpha_date, join_factor).fit()
+        model = sm.OLS(alpha_date, factor.astype(float)).fit()
 
-        alpha_neutral.ix[date][alpha_date.index] = model.resid
+        alpha_neutral.ix[date].ix[alpha_date.index] = model.resid
 
+    alpha_neutral = alpha_neutral.dropna(how='all', axis=0)
+    alpha_neutral = alpha_neutral.dropna(how='all', axis=1)
     return alpha_neutral
-
 
 def fillna_quantile(factor_list, industry_class, cap):
     factor_fills = []
