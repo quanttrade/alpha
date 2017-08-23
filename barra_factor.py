@@ -121,7 +121,8 @@ def standardize_cap(factor, cap):
         factor_t = factor_cap.ix[date].dropna()
         cap_t = cap.ix[date].ix[factor_t.index]
         factor_cap_average = np.average(factor_t, weights=cap_t)
-        factor_cap.ix[date] = (factor_cap.ix[date] - factor_cap_average) / factor_t.std()
+        factor_cap.ix[date] = (factor_cap.ix[date] -
+                               factor_cap_average) / factor_t.std()
     return factor_cap
 
 
@@ -176,14 +177,10 @@ def neutralize(alpha, factor_list):
     the factor used to regress alpha
     """
 
-
-
-
     alpha_neutral = pd.DataFrame({}, index=alpha.index, columns=alpha.columns)
 
     for date in alpha.index:
         # togather the data itoday into one dataframe
-
 
         factor = factor_list.ix[date]
 
@@ -191,10 +188,8 @@ def neutralize(alpha, factor_list):
         factor = factor.dropna(how='all', axis=1)
         factor = factor.fillna(0)
 
-
         alpha_date = alpha.ix[date].ix[factor.index]
         alpha_date = alpha_date.fillna(value=alpha_date.quantile())
-
 
         # do the ols
         model = sm.OLS(alpha_date, factor.astype(float)).fit()
@@ -204,6 +199,7 @@ def neutralize(alpha, factor_list):
     alpha_neutral = alpha_neutral.dropna(how='all', axis=0)
     alpha_neutral = alpha_neutral.dropna(how='all', axis=1)
     return alpha_neutral
+
 
 def fillna_quantile(factor_list, industry_class, cap):
     factor_fills = []
@@ -297,24 +293,31 @@ def industry_factor(hangye_class):
     return hangye_dict
 
 
-def caculate_factor_returns(barra_factor,  price_data):
+def caculate_factor_returns(barra_factor,  price_data, period):
 
     volume = price_data['volume']
-    returns = price_data['adjclose'].pct_change(1).shift(-1)
+    returns = price_data['adjclose'].pct_change(period).shift(-period)
     cap = price_data['close'] * price_data['total_shares']
+    barra_factor.index = barra_factor.index.rename(['date', 'asset'])
 
-    tradedate = barra_factor.index.get_level_values('tradedate')
+    tradedate = barra_factor.index.get_level_values('date')
     tradedate = list(set(tradedate))
     tradedate.sort()
-    #tradedate_M = [tradedate[i] for i in range(1,len(tradedate),21)]
+
+    stock_pool = barra_factor.index.get_level_values('asset')
+    stock_pool = list(set(stock_pool))
+    stock_pool.sort()
 
     factor_returns = pd.DataFrame(
-        index=tradedate, columns=barra_factor.columns)
+        index=tradedate[:-period], columns=barra_factor.columns)
     choose = u'有色金属'
+    rsquare = pd.Series(index=tradedate[:-period])
+    resid_returns = pd.DataFrame(np.nan, index=tradedate[
+                                 :-period], columns=stock_pool)
 
-    rsquare = pd.Series(index=tradedate)
+    industry_all = barra_factor.columns[10:43]
 
-    for date in tradedate[:-1]:
+    for date in tradedate[:-period]:
 
         print date
 
@@ -329,7 +332,7 @@ def caculate_factor_returns(barra_factor,  price_data):
 
         returns_t = returns_t.ix[factor.index]
         cap_t = cap.ix[date].ix[factor.index]
-        industry_key = factor.columns[10:-1]
+        industry_key = list(set(industry_all) & set(factor.columns))
 
         # caculate the cap of every industry
         industry_set = factor[industry_key]
@@ -362,11 +365,12 @@ def caculate_factor_returns(barra_factor,  price_data):
             beta[choose] = -1 * sum_ret / industry_cap[choose]
             factor_returns.ix[date] = beta
             rsquare.ix[date] = res.rsquared_adj
+            resid_returns.ix[date].ix[factor.index] = res.resid
 
         except Exception as e:
             print e
             factor_returns.ix[date] = 0.0
-    return factor_returns, resid
+    return factor_returns, rsquare, resid_returns
 
 
 if __name__ == "__main__":

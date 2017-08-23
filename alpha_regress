@@ -54,3 +54,86 @@ def get_alpha_df(alpha_list, path):
         df = pd.read_hdf(alpha_path, 'table')
         alpha_df[alpha] = df.stack()
     return alpha_df
+
+
+
+def compute_forward_pure_returns(barra_factor, price_data, periods=(1, 5, 10)):
+    """
+    Finds the N period forward returns (as percent change) for each asset provided.
+
+    Parameters
+    ----------
+    prices : pd.DataFrame
+        Pricing data to use in forward price calculation.
+        Assets as columns, dates as index. Pricing data must
+        span the factor analysis time period plus an additional buffer window
+        that is greater than the maximum number of expected periods
+        in the forward returns calculations.
+    periods : sequence[int]
+        periods to compute forward returns on.
+
+
+    Returns
+    -------
+    forward_returns : pd.DataFrame - MultiIndex
+        Forward returns in indexed by date and asset.
+        Separate column for each forward return window.
+    """
+
+    forward_returns = pd.DataFrame()
+
+    for period in periods:
+        factor_returns, rsquare, resid_returns = caculate_factor_returns(barra_factor, price_data, period)
+        forward_returns[period] = resid_returns.stack()
+
+
+    forward_returns.index = forward_returns.index.rename(['date', 'asset'])
+
+    return forward_returns
+
+def get_forward_returns_columns(columns):
+    return columns[columns.astype('str').str.isdigit()]
+
+
+def caculate_adjusted_IC(factor, forward_returns):
+
+    """
+    Computes the Spearman Rank Correlation based Information Coefficient (IC)
+    between factor values and N period forward returns for each period in
+    the factor index.
+    forward_returns = compute_forward_returns(prices)
+    forward_returns['factor'] = factor_data
+
+    Parameters
+    ----------
+    factor : pd.DataFrame - MultiIndex
+        A MultiIndex DataFrame indexed by date (level 0) and asset (level 1),
+        containing the values for a single alpha factor, forward returns for each period,
+        The factor quantile/bin that factor value belongs too, and (optionally) the group the
+
+    prices : pd.DataFrame
+        Pricing data to use in forward price calculation.
+        Assets as columns, dates as index. Pricing data must
+        span the factor analysis time period plus an additional buffer window
+        that is greater than the maximum number of expected periods
+        in the forward returns calculations.
+
+    Returns
+    -------
+    ic : pd.DataFrame
+        Spearman Rank correlation between factor and
+        provided forward returns.
+    """
+    factor_data = forward_returns.copy()
+    factor_data['factor'] = factor
+
+    def src_ic(group):
+        f = group['factor']
+        _ic = group[get_forward_returns_columns(factor_data.columns)].apply(lambda x: stats.pearsonr(x, f)[0])
+        return _ic
+
+    grouper = [factor_data.index.get_level_values('date')]
+    ic = factor_data.groupby(grouper).apply(src_ic)
+    ic.columns = pd.Int64Index(ic.columns)
+
+    return ic
