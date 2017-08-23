@@ -1,4 +1,5 @@
 from barra_factor import *
+from neutralize import *
 
 
 def alpha_corr_mean(alpha_value):
@@ -14,12 +15,42 @@ def alpha_corr_mean(alpha_value):
             if i  == j:
                 alpha_corr[i, j] =1
             else:
-                alpha_corr.loc[i, j] = alpha_value[alpha_name[i]].corrwith(alpha_value[alpha_name[j]], axis=1)
+                alpha_corr.loc[i, j] = alpha_value[alpha_name[i]].corrwith(alpha_value[alpha_name[j]], axis=1).mean()
 
-    for i range(N):
+    for i in range(N):
         for j in range(i + 1, N):
             alpha_corr.loc[i, j] = alpha_corr[j, i]
 
+    return alpha_corr
 
-def alpha_delete(alpha_corr, alpha_IR):
-    
+
+def alpha_delete(alpha_corr, alpha_IR, corr_limit, ir_limit, period):
+    alpha_corr_abs = alpha_corr.abs()
+    alpha_list = alpha_corr_abs.columns
+    alpha_IR_period = alpha_IR.ix[period][['Ann. IR', 'alpha_name']].set_index('alpha_name')['Ann. IR'].abs()
+
+    for alpha_i in alpha_list:
+        for alpha_j in alpha_list:
+            if alpha_i == alpha_j:
+                continue
+
+            if alpha_i in alpha_corr_abs.columns and alpha_j in alpha_corr_abs.columns:
+
+                if alpha_corr_abs.loc[alpha_i, alpha_j] > corr_limit:
+                    to_delete = alpha_IR_period.ix[[alpha_i, alpha_j]].argmin()
+                    alpha_corr_abs = alpha_corr_abs.drop(to_delete, axis=1)
+                    alpha_corr_abs = alpha_corr_abs.drop(to_delete, axis=0)
+
+    IR = alpha_IR_period.ix[alpha_corr_abs.index]
+    IR = IR[IR > ir_limit].dropna()
+    return IR
+
+
+def get_alpha_df(alpha_list, path):
+
+    alpha_df = pd.DataFrame()
+    for alpha in alpha_list:
+        alpha_path = os.path.join(path, alpha, 'neutralize_factor.h5')
+        df = pd.read_hdf(alpha_path, 'table')
+        alpha_df[alpha] = df.stack()
+    return alpha_df

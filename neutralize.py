@@ -63,9 +63,9 @@ if __name__ == '__main__':
             neutralized_factor_data.to_hdf(path + '\\factor_data_neutralize.h5', 'table')
             quantile_returns_mean_standard.to_excel(
                 path + '\\quantile_returns_mean_neutralize.xlsx')
-                ic_standard.to_excel(path + '\\ic_neutralize.xlsx')
-                ic_summary_table.to_excel(path + '\\ic_summary_table_neutralize.xlsx')
-                quantile_turnover_mean.to_excel(
+            ic_standard.to_excel(path + '\\ic_neutralize.xlsx')
+            ic_summary_table.to_excel(path + '\\ic_summary_table_neutralize.xlsx')
+            quantile_turnover_mean.to_excel(
                 path + '\\quantile_turnover_mean_neutralize.xlsx')
 
         except Exception as e:
