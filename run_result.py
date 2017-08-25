@@ -39,7 +39,7 @@ if __name__ == '__main__':
             IR = alpha_delete(alpha_corr, ic_adjust, 0.4, ir_limit, period)
             alpha_factor = get_alpha_df(list(IR.index), gtja_path)
             total_factor = pd.concat([barra_factor, alpha_factor], axis=1)
-            factor_returns, rsquare, resid_returns = caculate_factor_returns(factor, price_data, period)
+            factor_returns, rsquare, resid_returns = caculate_factor_returns(total_factor, price_data, period)
             alpha_returns = factor_returns[IR.index]
 
             for TC in TC_list:
@@ -49,7 +49,7 @@ if __name__ == '__main__':
                     cumulative_return, position = alpha_model_backtest(risk_factors, industry_factor, alpha_factor, alpha_returns,
                                                                        benchmark_component, price_data, TC)
                     daily_return = cumulative_return.pct_change().dropna()
-                    benchmark_return = zz500_return.ix[returns.index]
+                    benchmark_return = zz500_return.ix[daily_return.index]
                     excess_return = daily_return - benchmark_return
                     cumulative_excess_return = (1 + excess_return).cumprod()
                     ret_situation = statistics(cumulative_excess_return)
