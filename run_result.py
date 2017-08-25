@@ -20,6 +20,7 @@ if __name__ == '__main__':
     industry_factor = barra_factor.ix[:,10:-1]
     risk_factors = barra_factor.ix[:,:10]
     benchmark_component = pd.read_csv('D:data/daily_data/zz500_component.csv',index_col=0)
+    benchmark_component.index = pd.DatetimeIndex(benchmark_component.index)
     weight_bound = 0.02
     risk_loading_bound = 0.01
     industry_loading_bound = 0.05
@@ -40,6 +41,7 @@ if __name__ == '__main__':
             alpha_factor = get_alpha_df(list(IR.index), gtja_path)
             total_factor = pd.concat([barra_factor, alpha_factor], axis=1)
             factor_returns, rsquare, resid_returns = caculate_factor_returns(total_factor, price_data, period)
+            factor_returns.to_hdf(os.path.join(ir_path, 'factor_returns.h5'), 'table')
             alpha_returns = factor_returns[IR.index]
 
             for TC in TC_list:
