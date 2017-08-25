@@ -238,7 +238,7 @@ def alpha_model_backtest(barra_factor, industry_factor, alpha_factor, alpha_retu
 
     Lambda = np.power(0.5, 1.0 / 60.0)
     decay_weight = np.array([Lambda ** (249 - i) for i in range(250)])
-    day_return = pd.Series(0.0, index=tradedate[250 + 1 + period:])
+    day_return = pd.Series(0.0, index=tradedate[250 + 2 + period:])
 
     for date in tradedate[250 + period + 2:]:
         print date
