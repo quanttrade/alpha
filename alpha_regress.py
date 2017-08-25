@@ -240,7 +240,7 @@ def alpha_model_backtest(barra_factor, industry_factor, alpha_factor, alpha_retu
     decay_weight = np.array([Lambda ** (249 - i) for i in range(250)])
     day_return = pd.Series(0.0, index=tradedate[250 + 1 + period:])
 
-    for date in tradedate[250 + period + 1:]:
+    for date in tradedate[250 + period + 2:]:
         print date
         if date not in reblance_day:
             weight_dict[date] = now_weight
@@ -271,7 +271,7 @@ def alpha_model_backtest(barra_factor, industry_factor, alpha_factor, alpha_retu
                 w_old = now_weight.copy()
 
 
-            alpha_returns_t = np.average(alpha_returns.ix[:date][-250 - 1 - period:-period - 1].astype(float), weights=decay_weight, axis=0)
+            alpha_returns_t = np.average(alpha_returns.ix[:date][-250 - 2 - period:-period - 2].astype(float), weights=decay_weight, axis=0)
             alpha_returns_t = pd.Series(alpha_returns_t, index=alpha_returns.columns)
             alpha_factor_t = alpha_factor.ix[date]
 

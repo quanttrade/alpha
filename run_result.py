@@ -46,20 +46,21 @@ if __name__ == '__main__':
 
             for TC in TC_list:
                 tc_path = os.path.join(ir_path, 'TC_%s' % TC)
+                
                 if not os.path.exists(tc_path):
                     os.makedirs(tc_path)
 
-                    cumulative_return, position = alpha_model_backtest(risk_factors, industry_factor, alpha_factor, alpha_returns,
+                cumulative_return, position = alpha_model_backtest(risk_factors, industry_factor, alpha_factor, alpha_returns,
                                                                        benchmark_component, price_data, weight_bound, risk_loading_bound,
                                                                        industry_loading_bound, TC, period)
-                    daily_return = cumulative_return.pct_change().dropna()
-                    benchmark_return = zz500_return.ix[daily_return.index]
-                    excess_return = daily_return - benchmark_return
-                    cumulative_excess_return = (1 + excess_return).cumprod()
-                    ret_situation = statistics(cumulative_excess_return)
-                    turnover = caculate_turnover(position)
-                    turnover = turnover[turnover>0]
-                    cumulative_return.to_csv(os.path.join(tc_path, 'cumulative_return.csv'))
-                    ret_situation.to_csv(os.path.join(tc_path, 'ret_situation.csv'))
-                    position.to_hdf(os.path.join(tc_path, 'position.h5'), 'table')
-                    turnover.to_csv(os.path.join(tc_path, 'turnover.csv'))
+                daily_return = cumulative_return.pct_change().dropna()
+                benchmark_return = zz500_return.ix[daily_return.index]
+                excess_return = daily_return - benchmark_return
+                cumulative_excess_return = (1 + excess_return).cumprod()
+                ret_situation = statistics(cumulative_excess_return)
+                turnover = caculate_turnover(position)
+                turnover = turnover[turnover>0]
+                cumulative_return.to_csv(os.path.join(tc_path, 'cumulative_return.csv'))
+                ret_situation.to_csv(os.path.join(tc_path, 'ret_situation.csv'))
+                position.to_hdf(os.path.join(tc_path, 'position.h5'), 'table')
+                turnover.to_csv(os.path.join(tc_path, 'turnover.csv'))
