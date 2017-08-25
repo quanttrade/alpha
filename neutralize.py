@@ -23,7 +23,7 @@ if __name__ == '__main__':
             neutralized_factor.to_hdf(path + '\\neutralize_factor.h5', 'table')
 
 
-        #get ic and other statistics of factor
+            #get ic and other statistics of factor
             neutralized_factor_stack = neutralized_factor.stack()
             prices = price_data['adjclose'].ix[neutralized_factor_stack.index[0][0]:]
             neutralized_factor_data = alphalens.utils.get_clean_factor_and_forward_returns(factor=neutralized_factor_stack,

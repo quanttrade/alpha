@@ -19,4 +19,21 @@ def returns_(netvalue):
 
 def statistics(netvalue):
     netvalue = netvalue.dropna()
-    return net_value.groupby(lambda x: x.year).agg([maxdrawdown, volatility, returns_])
+    return netvalue.groupby(lambda x: x.year).agg([maxdrawdown, volatility, returns_])
+
+
+def caculate_turnover(chicang):
+    tradedate = chicang.index.get_level_values('date')
+    tradedate = list(set(tradedate))
+    tradedate.sort()
+    turnover_Series = pd.Series(0.0, index=tradedate)
+    for i in range(1, len(tradedate)):
+        last_weight = chicang.ix[tradedate[i - 1]]
+        now_weight = chicang.ix[tradedate[i]]
+        stock_pool = list(set(last_weight.index) | set(now_weight.index))
+        w_now = pd.Series(0.0, index=stock_pool)
+        w_last = pd.Series(0.0, index=stock_pool)
+        w_now.ix[now_weight.index] = now_weight
+        w_last.ix[last_weight.index] = last_weight
+        turnover_Series.ix[tradedate[i]] = (w_now - w_last).abs().sum()
+    return turnover_Series
