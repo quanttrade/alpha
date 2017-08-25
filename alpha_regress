@@ -302,6 +302,34 @@ def alpha_model_backtest(barra_factor, industry_factor, alpha_factor, alpha_retu
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == '__main__':
     gtja_path = 'E:\gtja_alpha'
     alpha_dir = os.listdir(gtja_path)
