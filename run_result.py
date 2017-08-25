@@ -47,7 +47,8 @@ if __name__ == '__main__':
                 if not os.path.exists(tc_path):
                     os.makedirs(tc_path)
                     cumulative_return, position = alpha_model_backtest(risk_factors, industry_factor, alpha_factor, alpha_returns,
-                                                                       benchmark_component, price_data, TC)
+                                                                       benchmark_component, price_data, weight_bound, risk_loading_bound,
+                                                                       industry_loading_bound, TC, period)
                     daily_return = cumulative_return.pct_change().dropna()
                     benchmark_return = zz500_return.ix[daily_return.index]
                     excess_return = daily_return - benchmark_return
