@@ -2,7 +2,7 @@ from barra_factor import *
 from neutralize import *
 from scipy import stats
 from cvxpy import *
-
+import numpy as np
 
 def alpha_delete(alpha_corr, alpha_IR, corr_limit, ir_limit, period):
     alpha_corr_abs = alpha_corr.abs()
@@ -202,7 +202,7 @@ def stock_weight(bench_weight, risk_factor, industry_factor_t, volume_t, returns
                    abs(bench_industry_loading - potofolio_industry_loading) < industry_loading_bound * bench_industry_loading]
     prob = Problem(Maximize(ret), constraints)
     Maximize_value = prob.solve()
-    weight = array(w.value)
+    weight = np.array(w.value)
     weight = pd.Series([weight[i][0] for i in range(len(weight))], index=risk_factor.index) * (1 - untrade_weight)
 
     if untrade_stock:
@@ -271,8 +271,8 @@ def alpha_model_backtest(barra_factor, industry_factor, alpha_factor, alpha_retu
                 w_old = now_weight.copy()
 
 
-            alpha_returns_t = np.average(alpha_returns.ix[:date][-250 + 1 + period:-period - 1].astype(float), weights=decay_weight, axis=0)
-            alpha_returns_t = pd.Series(alpha_returns_date, index=alpha_returns.columns)
+            alpha_returns_t = np.average(alpha_returns.ix[:date][-250 - 1 - period:-period - 1].astype(float), weights=decay_weight, axis=0)
+            alpha_returns_t = pd.Series(alpha_returns_t, index=alpha_returns.columns)
             alpha_factor_t = alpha_factor.ix[date]
 
             reblance_weight = stock_weight(bench_weight, risk_factor, industry_factor_t, volume_t,returns_t,alpha_factor_t,
