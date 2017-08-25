@@ -1,0 +1,161 @@
+from barra_factor import *
+from neutralize import *
+from scipy import stats
+
+
+def alpha_delete(alpha_corr, alpha_IR, corr_limit, ir_limit, period):
+    alpha_corr_abs = alpha_corr.abs()
+    alpha_list = alpha_corr_abs.columns
+    alpha_IR_period = alpha_IR.ix[period][['Ann. IR', 'alpha_name']].set_index('alpha_name')['Ann. IR'].abs()
+
+    for alpha_i in alpha_list:
+        for alpha_j in alpha_list:
+            if alpha_i == alpha_j:
+                continue
+
+            if alpha_i in alpha_corr_abs.columns and alpha_j in alpha_corr_abs.columns:
+
+                if alpha_corr_abs.loc[alpha_i, alpha_j] > corr_limit:
+                    to_delete = alpha_IR_period.ix[[alpha_i, alpha_j]].argmin()
+                    alpha_corr_abs = alpha_corr_abs.drop(to_delete, axis=1)
+                    alpha_corr_abs = alpha_corr_abs.drop(to_delete, axis=0)
+
+    IR = alpha_IR_period.ix[alpha_corr_abs.index]
+    IR = IR[IR > ir_limit].dropna()
+    return IR
+
+
+def stock_weight(factor, benchmark, factor_returns):
+    pass
+
+
+
+
+def get_alpha_df(alpha_list, path):
+
+    alpha_df = pd.DataFrame()
+    for alpha in alpha_list:
+        alpha_path = os.path.join(path, alpha, 'neutralize_factor.h5')
+        df = pd.read_hdf(alpha_path, 'table')
+        alpha_df[alpha] = df.stack()
+    return alpha_df
+
+
+
+def compute_forward_pure_returns(barra_factor, price_data, periods=(1, 5, 10)):
+    """
+    Finds the N period forward returns (as percent change) for each asset provided.
+
+    Parameters
+    ----------
+    prices : pd.DataFrame
+        Pricing data to use in forward price calculation.
+        Assets as columns, dates as index. Pricing data must
+        span the factor analysis time period plus an additional buffer window
+        that is greater than the maximum number of expected periods
+        in the forward returns calculations.
+    periods : sequence[int]
+        periods to compute forward returns on.
+
+
+    Returns
+    -------
+    forward_returns : pd.DataFrame - MultiIndex
+        Forward returns in indexed by date and asset.
+        Separate column for each forward return window.
+    """
+
+    forward_returns = pd.DataFrame()
+
+    for period in periods:
+        factor_returns, rsquare, resid_returns = caculate_factor_returns(barra_factor, price_data, period)
+        forward_returns[period] = resid_returns.stack()
+
+
+    forward_returns.index = forward_returns.index.rename(['date', 'asset'])
+
+    return forward_returns
+
+def get_forward_returns_columns(columns):
+    return columns[columns.astype('str').str.isdigit()]
+
+
+def caculate_adjusted_IC(factor, forward_returns):
+
+    """
+    Computes the Spearman Rank Correlation based Information Coefficient (IC)
+    between factor values and N period forward returns for each period in
+    the factor index.
+    forward_returns = compute_forward_returns(prices)
+    forward_returns['factor'] = factor_data
+
+    Parameters
+    ----------
+    factor : pd.DataFrame - MultiIndex
+        A MultiIndex DataFrame indexed by date (level 0) and asset (level 1),
+        containing the values for a single alpha factor, forward returns for each period,
+        The factor quantile/bin that factor value belongs too, and (optionally) the group the
+
+    prices : pd.DataFrame
+        Pricing data to use in forward price calculation.
+        Assets as columns, dates as index. Pricing data must
+        span the factor analysis time period plus an additional buffer window
+        that is greater than the maximum number of expected periods
+        in the forward returns calculations.
+
+    Returns
+    -------
+    ic : pd.DataFrame
+        Spearman Rank correlation between factor and
+        provided forward returns.
+    """
+    factor_data = forward_returns.copy()
+    factor_data['factor'] = factor
+
+    def src_ic(group):
+        f = group['factor']
+        _ic = group[get_forward_returns_columns(factor_data.columns)].apply(lambda x: stats.pearsonr(x, f)[0])
+        return _ic
+
+    grouper = [factor_data.index.get_level_values('date')]
+    ic = factor_data.groupby(grouper).apply(src_ic)
+    ic.columns = pd.Int64Index(ic.columns)
+
+    return ic
+
+
+def factor_information_coefficient_statistics(ic):
+        ic_summary_table = pd.DataFrame()
+        ic_summary_table["IC Mean"] = ic.mean()
+        ic_summary_table["IC Std."] = ic.std()
+        t_stat, p_value = stats.ttest_1samp(ic, 0)
+        ic_summary_table["t-stat(IC)"] = t_stat
+        ic_summary_table["p-value(IC)"] = p_value
+        ic_summary_table["IC Skew"] = stats.skew(ic)
+        ic_summary_table["IC Kurtosis"] = stats.kurtosis(ic)
+        ic_summary_table["Ann. IR"] = (
+            ic.mean() / ic.std()) * np.sqrt(252)
+
+        return ic_summary_table
+
+if __name__ == '__main__':
+    gtja_path = 'E:\gtja_alpha'
+    alpha_dir = os.listdir(gtja_path)
+    barra_factor = pd.read_hdf('D:data/daily_data/barra_factor_cap.h5','barra_factor')
+    price_data = pd.read_hdf('D:\data\daily_data\\price_data.h5','table')
+    periods = [1, 2, 3, 4, 5, 10, 20]
+    forward_returns = compute_forward_pure_returns(barra_factor, price_data, periods)
+    forward_returns.to_hdf('D:\data\daily_data\\forward_returns.h5', 'table')
+
+    for alpha_name in alpha_dir:
+        print alpha_name
+        try:
+            path = os.path.join(gtja_path, alpha_name)
+            neutralized_factor = pd.read_hdf(path + '\\neutralize_factor.h5', 'table')
+            adjusted_ic = caculate_adjusted_IC(neutralized_factor.stack(), forward_returns)
+            ic_summary_table = factor_information_coefficient_statistics(adjusted_ic)
+            ic_summary_table.to_excel(path + '\\adjusted_ic_summary.xlsx')
+
+        except Exception as e:
+            print e
+            continue

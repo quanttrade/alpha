@@ -72,4 +72,4 @@ if __name__ == '__main__':
             print e
             continue
 
-ic_table_neutralize.to_csv('D:\data\daily_data\\ic_table_neutralize.csv')
+    ic_table_neutralize.to_csv('D:\data\daily_data\\ic_table_neutralize.csv')
