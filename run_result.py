@@ -14,11 +14,11 @@ if __name__ == '__main__':
     ic_adjust = pd.read_csv('D:data/daily_data/ic_adjust.csv',index_col=0)
     zz500_return = pd.read_hdf('D:data/daily_data/zz500_returns.h5', 'table')
     gtja_path = 'E:\gtja_alpha'
-    save_path = 'E\short_term_alpha'
+    save_path = 'E:\short_term_alpha'
     barra_factor = pd.read_hdf('D:data/daily_data/barra_factor_cap.h5','barra_factor')
     price_data = pd.read_hdf('D:\data\daily_data\\price_data.h5','table')
     industry_factor = barra_factor.ix[:,10:-1]
-    risk_factors = barra_factor[:,:10]
+    risk_factors = barra_factor.ix[:,:10]
     benchmark_component = pd.read_csv('D:data/daily_data/zz500_component.csv',index_col=0)
     weight_bound = 0.02
     risk_loading_bound = 0.01
@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
     for period in periods:
         print period
-        period_path = save_path + '\\period_%s' % period
+        period_path = os.path.join(save_path, 'period_%s' %period)
         if not os.path.exists(period_path):
             os.makedirs(period_path)
 
@@ -38,7 +38,7 @@ if __name__ == '__main__':
                 os.makedirs(ir_path)
             IR = alpha_delete(alpha_corr, ic_adjust, 0.4, ir_limit, period)
             alpha_factor = get_alpha_df(list(IR.index), gtja_path)
-            total_factor = pd.concat([barra_factor, alpha_df], axis=1)
+            total_factor = pd.concat([barra_factor, alpha_factor], axis=1)
             factor_returns, rsquare, resid_returns = caculate_factor_returns(factor, price_data, period)
             alpha_returns = factor_returns[IR.index]
 
