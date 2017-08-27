@@ -107,12 +107,13 @@ class Alphas(object):
         :传入参数 pn_data: pandas.Panel
         """
         # 获取历史数据
-        self.open = pn_data['adjOpen']
-        self.high = pn_data['adjHigh']
-        self.low = pn_data['adjLow']
-        self.close = pn_data['adjClose']
+        self.open = pn_data['open']
+        self.high = pn_data['high']
+        self.low = pn_data['low']
+        self.close = pn_data['close']
         self.volume = pn_data['volume']
-        self.returns = self.close.pct_change()
+        self.adjclose = pn_data['adjclose']
+        self.returns = self.adjclose.pct_change()
 
     #   每个因子的计算公式：
     # alpha001:(rank(Ts_ArgMax(SignedPower(((returns < 0) ? stddev(returns,
@@ -488,13 +489,3 @@ class Alphas(object):
                  * self.volume / divisor).copy()
         return - ((2 * scale(rank(inner))) -
                   scale(rank(ts_argmax(self.close, 10))))
-
-
-def beta(adjHigh, adjLow):
-    beta_value = pd.DataFrame(index=adjHigh.index, columns=adjHigh.columns)
-    for stock in adjHigh.columns:
-        b = pd.stats.ols.MovingOLS(y=adjHigh[stock], x=adjLow[
-                                   stock], window_type='rolling', window=20, intercept=True).beta.x
-        beta_value[stock].ix[b.index] = b
-    beta_value = beta_value.dropna(how='all', axis=1)
-    return beta_value

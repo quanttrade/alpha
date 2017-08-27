@@ -39,4 +39,4 @@ def caculate_turnover(chicang):
         w_now.ix[now_weight.index] = now_weight
         w_last.ix[last_weight.index] = last_weight
         turnover_Series.ix[tradedate[i]] = (w_now - w_last).abs().sum()
-    return turnover_Series
+    return turnover_Series[turnover_Series > 0].mean() / 2.0

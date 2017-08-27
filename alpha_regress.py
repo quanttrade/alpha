@@ -2,7 +2,7 @@ from barra_factor import *
 from neutralize import *
 from scipy import stats
 from cvxpy import *
-
+import numpy as np
 
 def alpha_delete(alpha_corr, alpha_IR, corr_limit, ir_limit, period):
     alpha_corr_abs = alpha_corr.abs()
@@ -40,7 +40,6 @@ def get_alpha_df(alpha_list, path):
 def compute_forward_pure_returns(barra_factor, price_data, periods=(1, 5, 10)):
     """
     Finds the N period forward returns (as percent change) for each asset provided.
-
     Parameters
     ----------
     prices : pd.DataFrame
@@ -51,8 +50,6 @@ def compute_forward_pure_returns(barra_factor, price_data, periods=(1, 5, 10)):
         in the forward returns calculations.
     periods : sequence[int]
         periods to compute forward returns on.
-
-
     Returns
     -------
     forward_returns : pd.DataFrame - MultiIndex
@@ -83,21 +80,18 @@ def caculate_adjusted_IC(factor, forward_returns):
     the factor index.
     forward_returns = compute_forward_returns(prices)
     forward_returns['factor'] = factor_data
-
     Parameters
     ----------
     factor : pd.DataFrame - MultiIndex
         A MultiIndex DataFrame indexed by date (level 0) and asset (level 1),
         containing the values for a single alpha factor, forward returns for each period,
         The factor quantile/bin that factor value belongs too, and (optionally) the group the
-
     prices : pd.DataFrame
         Pricing data to use in forward price calculation.
         Assets as columns, dates as index. Pricing data must
         span the factor analysis time period plus an additional buffer window
         that is greater than the maximum number of expected periods
         in the forward returns calculations.
-
     Returns
     -------
     ic : pd.DataFrame
@@ -132,52 +126,50 @@ def factor_information_coefficient_statistics(ic):
             ic.mean() / ic.std()) * np.sqrt(252)
 
 
-def stock_weight(bench_weight, risk_factor, volume_t, returns_t, alpha_factor, alpha_returns, upper_bound, TC, w_old):
+def stock_weight(bench_weight, risk_factor, industry_factor_t, volume_t, returns_t, alpha_factor_t, alpha_returns_t, weight_bound, risk_loading_bound, industry_loading_bound, TC, w_old):
     """
     return the potofolio weight which make the returns best
-
     Parameters
     bench_weight: Seriees
     the cap_weight of the benchmark
-
     risk_factor: DataFrame
-    barra_factor including risk factors and industry factors
-
+    barra_factor  risk factors
+    industry_factor: DataFrame
     volume_t :Series
     the volume if today
-
     returns_t: Series
     the retuens of today
-
     alpha_factor: DataFrame
     the loading the alpha_factor
-
     factor_returns: DataFrame
-
     upper_bound: float
     the upper bound of stock weight
-
     TC: float
     Turnover fee
-
     w_old: array
     the stock weight last day
     """
     # first caculate the bench loading
     bench_risk_loading = risk_factor.ix[bench_weight.index].values.T.dot(bench_weight.values)
+    bench_industry_loading = industry_factor_t.ix[bench_weight.index].values.T.dot(bench_weight.values)
+
 
     #restrict the stock tradeable
     risk_factor = risk_factor[volume_t > 0]
-    risk_factor = risk_factor[returns_t.abs()] < 0.1
-    alpha_factor = alpha_factor[risk_factor.index]
+    risk_factor = risk_factor[returns_t.abs() < 0.0998]
+    industry_factor_t = industry_factor_t.ix[risk_factor.index]
+    alpha_factor_t = alpha_factor_t.ix[risk_factor.index]
+
 
     #defne the weight vector to solve
     N = risk_factor.shape[0]
     w = Variable(N, 1)
+    untrade_stock = []
 
     #caculate the potofolio loading
     potofolio_risk_loading = risk_factor.values.T * w
-    alpha_loading = alpha_factor.values.T * w
+    potofolio_industry_loading = industry_factor_t.values.T * w
+    alpha_loading = alpha_factor_t.values.T * w
     untrade_weight = 0.0
     #the weight of last day
     if isinstance(w_old, float):
@@ -190,31 +182,34 @@ def stock_weight(bench_weight, risk_factor, volume_t, returns_t, alpha_factor, a
         untrade_stock = list(set(w_old.index) - set(w_last.index))
         for stock in untrade_stock:
             untrade_weight += w_old[stock]
+        w_last = w_last.values
 
     #define the object to solve
-    ret = alpha_loading * alpha_returns - TC * abs(w - w_last)
+    ret = alpha_loading.T * alpha_returns_t.values - TC * sum_entries(abs(w - w_last)) / 2.0
 
-    constraints = [w >= 0, w <= upper_bound, sum_entries(w) == 1, abs(potofolio_risk_loading - bench_risk_loading) < 0.01]
+    constraints = [0 <= w, w <= weight_bound, sum_entries(w) == 1, abs(potofolio_risk_loading - bench_risk_loading) < risk_loading_bound,
+                   abs(bench_industry_loading - potofolio_industry_loading) < industry_loading_bound * bench_industry_loading]
     prob = Problem(Maximize(ret), constraints)
     Maximize_value = prob.solve()
-    weight = array(w.value)
+    weight = np.array(w.value)
     weight = pd.Series([weight[i][0] for i in range(len(weight))], index=risk_factor.index) * (1 - untrade_weight)
 
     if untrade_stock:
         for stock in untrade_stock:
             weight[stock] = w_old[stock]
+
+    weight = weight[weight > 0.001]
+    weight = weight / weight.sum()
     return weight
 
 
 
+def alpha_model_backtest(barra_factor, industry_factor, alpha_factor, alpha_returns, alpha_ic, benchmark_component, price_data, weight_bound,
+                         risk_loading_bound, industry_loading_bound, TC, period, window):
 
-def alpha_model_backtest(barra_factor, alpha_facotr, alpha_returns, benchmark_component, price_data, upper_bound, TC):
-    """
-    caculate the alpha models
-    """
 
     volume = price_data['volume']
-    returns = price_data['adjclose'].pct_change(period).shift(-period)
+    returns = price_data['adjclose'].pct_change()
     cap = price_data['close'] * price_data['total_shares']
     barra_factor.index = barra_factor.index.rename(['date', 'asset'])
 
@@ -222,23 +217,38 @@ def alpha_model_backtest(barra_factor, alpha_facotr, alpha_returns, benchmark_co
     tradedate = list(set(tradedate))
     tradedate.sort()
     tradedate = pd.Series(tradedate)
-    reblance_day = tradedate.ix[tradedate.index % 2 == 0]
+    reblance_day = tradedate.ix[tradedate.index % period == 0]
+
+    tradedate = tradedate.tolist()
+    reblance_day = reblance_day.tolist()
 
     weight_dict = dict()
     now_weight = pd.Series()
 
     Lambda = np.power(0.5, 1.0 / 60.0)
-    decay_weight = np.array([Lambda ** (249 - i) for i in range(i)])
+    decay_weight = np.array([Lambda ** (window - i) for i in range(window)])
+    day_return = pd.Series(0.0, index=tradedate[window + 1 + period:])
 
-    for date in tradedate:
+    for date in tradedate[window + period + 1:]:
+        print date
         if date not in reblance_day:
             weight_dict[date] = now_weight
+            returns_t = returns.ix[date]
+            if not now_weight.empty:
+                day_return.ix[date] = now_weight.dot(returns_t.ix[now_weight.index])
+            else:
+                day_return.ix[date] = 0.0
         else:
             cap_t = cap.ix[date]
             returns_t = returns.ix[date]
             volume_t = volume.ix[date]
 
             risk_factor = barra_factor.ix[date]
+
+            industry_factor_t = industry_factor.ix[date]
+            industry_factor_t = industry_factor_t.replace([0], np.nan)
+            industry_factor_t = industry_factor_t.dropna(how='all', axis=1)
+            industry_factor_t = industry_factor_t.fillna(0)
             benchmark_component_date = benchmark_component.ix[date]
             bench_weight = cap_t.ix[risk_factor.index].ix[benchmark_component_date].dropna()
             bench_weight = bench_weight / bench_weight.sum()
@@ -249,35 +259,42 @@ def alpha_model_backtest(barra_factor, alpha_facotr, alpha_returns, benchmark_co
             else:
                 w_old = now_weight.copy()
 
+            #alpha_ic_t = np.average(alpha_ic.ix[:date][-window - 1 - period:-period - 1].astype(float), weights=decay_weight, axis=0)
+            #alpha_ic_t = np.abs(alpha_ic_t)
+            #alpha_weight = alpha_ic_t / alpha_ic_t.sum()
+            alpha_returns_t = np.average(alpha_returns.ix[:date][-window - 1 - period:-period - 1].astype(float), weights=decay_weight, axis=0)
+            #alpha_returns_t = alpha_returns_t * alpha_ic_t
+            alpha_returns_t = pd.Series(alpha_returns_t, index=alpha_returns.columns)
+            alpha_factor_t = alpha_factor.ix[date]
 
-            alpha_returns_date = np.average(alpha_returns.ix[:date][-250:], weights=decay_weight, axis=1)
+            reblance_weight = stock_weight(bench_weight, risk_factor, industry_factor_t, volume_t,returns_t,alpha_factor_t,
+                                           alpha_returns_t,weight_bound,risk_loading_bound,industry_loading_bound,TC,w_old)
 
-            reblance_weight = stock_weight(bench_weight=bench_weight, risk_factor=risk_factor,
-                                           volume_t=volume_t, returns_t=returns,
-                                           alpha_factor=alpha_facotr.ix[date], alpha_returns=alpha_returns_date
-                                           upper_bound=upper_bound, TC=TC, w_old=w_old)
+            now_weight = reblance_weight.copy()
+            weight_dict[date] = now_weight.copy()
+            if not isinstance(w_old, float):
+                stock_pool = list(set(w_old.index) | set(now_weight.index))
 
-            now_weight = reblance_weight
+                w_now = pd.Series(0.0, index=stock_pool)
+                w_last = pd.Series(0.0, index=stock_pool)
 
-            weight_dict[date] = now_weight
+                w_now.ix[now_weight.index] = now_weight
+                w_last.ix[w_old.index] = w_old
 
+            else:
+                w_last = 0.0
+                w_now = now_weight
 
+            if isinstance(w_last, float):
+                day_return.ix[date] = - TC * (now_weight - w_last).abs().sum() / 2.0
+            else:
+                day_return.ix[date] = w_last.dot(returns_t.ix[w_last.index]) - TC * (now_weight - w_last).abs().sum() / 2.0
 
+            print "coost %f" % (TC / 2.0 * (now_weight - w_last).abs().sum())
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    weight = pd.DataFrame(weight_dict).T.stack()
+    weight.index = weight.index.rename(['date','asset'])
+    return (1 + day_return).cumprod(), weight
 
 
 
