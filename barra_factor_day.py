@@ -196,15 +196,20 @@ if __name__ == '__main__':
     data = cursor.fetchall()
     data = pd.DataFrame(data)
     print data
+
+    data.to_hdf('D:\data\daily_data\data.h5','table')
     cursor.execute('select distinct * from stock_price where tradedate<=%s and tradedate>=%s;' %(int(date), int(begin_date)))
     prime_close = cursor.fetchall()
     prime_close = pd.DataFrame(prime_close)
     prime_close = prime_close.pivot(index='tradedate',columns='secid',values='prime_close')
     print prime_close
 
-    fundmental = get_fundmental_day(int(date))
-    print fundmental
+    prime_close.to_excel('D:\data\daily_data\prime_close.xlsx')
 
+    fundmental = get_fundmental_day(int(date))
+    print fundmental.to_excel('D:\data\daily_data\\fundmental.xlsx')
+
+    price_data = load_data(data, prime_close)
     pct_wdqa = pd.read_hdf('D:data/daily_data/pct_wdqa.h5', 'table')
     barra_factor = create_daily_barra_factor(fundmental, price_data, pct_wdqa)
     print barra_factor
