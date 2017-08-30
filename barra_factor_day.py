@@ -5,6 +5,7 @@ import numpy as np
 from WindPy import w
 import statsmodels.api as sm
 import ts_api_demo as ts
+import pymysql
 
 
 
@@ -174,5 +175,28 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return):
     return barra_factor
 
 if __name__ == '__main__':
-    data = get_fundmental_day(20170829)
-    print data
+
+    date = '20170829'
+    length = 510
+    begin_date = w.tdaysoffset(-length, date).Data[0][0]
+    begin_date = ''.join(str(begin_date).split(' ')[0].split('-'))
+
+    conn = pymysql.connect(host='127.0.0.1',
+                           port=3306,
+                           user='root',
+                           password='lyz940513',
+                           db='mysql',
+                           charset='utf8mb4',
+                           cursorclass=pymysql.cursors.DictCursor)
+    cursor = conn.cursor()
+
+    cursor.execute('select distinct * from stockprice where tradedate<=%s and tradedate>=%s;' %(int(date), int(begin_date)))
+    data = cursor.fetchall()
+    data = pd.DataFrame(data)
+    cursor.execute('select distinct * from stock_price where tradedate<=%s and tradedate>=%s;' %(int(date), int(begin_date)))
+    prime_close = cursor.fetchall()
+    prime_close = pd.DataFrame(prime_close)
+    prime_close = prime_close.pivot(index='tradedate',columns='secid',values='prime_close')
+    fundmental = get_fundmental_day(int(date))
+    pct_wdqa = pd.read_hdf('D:data/daily_data/pct_wdqa.h5', 'table')
+    barra_factor = create_daily_barra_factor(fundmental, price_data, pct_wdqa)

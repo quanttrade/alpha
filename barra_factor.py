@@ -19,41 +19,43 @@ def load_data(data, prime_close):
 
     close = data.pivot(index='tradedate',
                        columns='secid',
-                       values='closeprice')
+                       values='closeprice').astype(float)
 
     open_ = data.pivot(index='tradedate',
                        columns='secid',
-                       values='openprice')
+                       values='openprice').astype(float)
 
     high = data.pivot(index='tradedate',
                       columns='secid',
-                      values='highprice')
+                      values='highprice').astype(float)
 
     low = data.pivot(index='tradedate',
                      columns='secid',
-                     values='lowprice')
+                     values='lowprice').astype(float)
 
     volume = data.pivot(index='tradedate',
                         columns='secid',
-                        values='volume')
+                        values='volume').astype(float)
 
     total_shares = data.pivot(index='tradedate',
                               columns='secid',
-                              values='total_shares')
+                              values='total_shares').astype(float)
 
     vwap = data.pivot(index='tradedate',
                       columns='secid',
-                      values='vwap')
+                      values='vwap').astype(float)
 
     amt = data.pivot(index='tradedate',
                      columns='secid',
-                     values='amt')
+                     values='amt').astype(float)
 
     free_float_shares = data.pivot(index='tradedate',
                                    columns='secid',
-                                   values='free_float_shares')
+                                   values='free_float_shares').astype(float)
 
-    adjfactor = prime_close / close
+    adjfactor = prime_close.astype(float) / close.astype(float)
+
+
 
     pn_data = dict()
 
