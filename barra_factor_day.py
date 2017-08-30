@@ -210,8 +210,8 @@ if __name__ == '__main__':
     print fundmental.to_excel('D:\data\daily_data\\fundmental.xlsx')
 
     price_data = load_data(data, prime_close)
-    volume = price_data['close'].index
+    volume = price_data['close']
     pct_wdqa = w.wsd('881001.WI', 'pct_chg', volume.index[0], volume.index[-1])
-    pct_wdqa = pd.Series(pct_wdqa.Data[0], index=volume.index)
+    pct_wdqa = pd.Series(pct_wdqa.Data[0], index=volume.index) / 100.0
     barra_factor = create_daily_barra_factor(fundmental, price_data, pct_wdqa)
     print barra_factor
