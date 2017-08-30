@@ -107,7 +107,7 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return):
 
     # Volatility
     Lambda_42 = np.power(0.5, 1 / 42.0)
-    weight_42 = np.array([Lambda_40 ** (252 - i) for i in range(252)])
+    weight_42 = np.array([Lambda_42 ** (252 - i) for i in range(252)])
     excess_return = (stock_returns.T - benchmark_return.ix[stock_returns.index]).T
     excess_return_square = (excess_return - excess_return.mean(axis=0)) ** 2
     dastd = np.sqrt(np.average(excess_return_square, weights=weight_42, axis=0))
@@ -179,7 +179,7 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return):
 if __name__ == '__main__':
 
     date = '20170829'
-    length = 510
+    length = 540
     begin_date = w.tdaysoffset(-length, date).Data[0][0]
     begin_date = ''.join(str(begin_date).split(' ')[0].split('-'))
 
@@ -210,6 +210,8 @@ if __name__ == '__main__':
     print fundmental.to_excel('D:\data\daily_data\\fundmental.xlsx')
 
     price_data = load_data(data, prime_close)
-    pct_wdqa = pd.read_hdf('D:data/daily_data/pct_wdqa.h5', 'table')
+    volume = price_data['close'].index
+    pct_wdqa = w.wsd('881001.WI', 'pct_chg', volume.index[0], volume.index[-1])
+    pct_wdqa = pd.Series(pct_wdqa.Data[0], index=volume.index)
     barra_factor = create_daily_barra_factor(fundmental, price_data, pct_wdqa)
     print barra_factor
