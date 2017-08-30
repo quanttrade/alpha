@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
 import numpy as np
-#from barra_factor.py import *
+from barra_factor import *
 from WindPy import w
 import statsmodels.api as sm
 import ts_api_demo as ts
 import pymysql
+from WindPy import w
+w.start()
 
 
 
@@ -193,10 +195,16 @@ if __name__ == '__main__':
     cursor.execute('select distinct * from stockprice where tradedate<=%s and tradedate>=%s;' %(int(date), int(begin_date)))
     data = cursor.fetchall()
     data = pd.DataFrame(data)
+    print data
     cursor.execute('select distinct * from stock_price where tradedate<=%s and tradedate>=%s;' %(int(date), int(begin_date)))
     prime_close = cursor.fetchall()
     prime_close = pd.DataFrame(prime_close)
     prime_close = prime_close.pivot(index='tradedate',columns='secid',values='prime_close')
+    print prime_close
+
     fundmental = get_fundmental_day(int(date))
+    print fundmental
+
     pct_wdqa = pd.read_hdf('D:data/daily_data/pct_wdqa.h5', 'table')
     barra_factor = create_daily_barra_factor(fundmental, price_data, pct_wdqa)
+    print barra_factor
