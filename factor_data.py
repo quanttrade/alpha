@@ -14,6 +14,7 @@ from scipy.stats import rankdata
 from scipy import stats
 import alphalens
 import os
+from barra_factor import *
 
 
 def ts_sum(df, window=10):
@@ -545,9 +546,6 @@ class GtjaAlpha(object):
     def alpha115(self):
         return rank(correlation(self.high * 0.9 + self.close * 0.1, sma(self.volume, 30), 10)) ** rank(correlation(ts_rank(self.high * 0.5 + self.low * 0.5, 4), ts_rank(self.volume, 10), 7))
 
-    def alpha116(self):
-        return regbeta(self.close, pd.Series(20) + 1, 20)
-
     def alpha117(self):
         return ts_rank(self.volume, 32) * (1 - ts_rank((self.close + self.high - self.low), 16)) * (1 - ts_rank(self.returns, 32))
 
@@ -646,9 +644,6 @@ class GtjaAlpha(object):
 
     def alpha145(self):
         return (sma(self.volume, 9) - sma(self.volume, 26)) / sma(self.volume, 12)
-
-    def alpha147(self):
-        return regbeta(sma(self.close, 12), pd.Series(12) + 1, 12)
 
     def alpha148(self):
         return rank(correlation(self.open, ts_sum(sma(self.volume, 60), 9), 6)) - rank(self.open - ts_min(self.open, 14))
@@ -750,68 +745,7 @@ class GtjaAlpha(object):
         return correlation(sma(self.volume, 20), self.low, 5) + (self.high * 0.5 + self.low * 0.5 - self.close)
 
 
-def load_data(data, prime_close):
-    data['tradedate'] = data.tradedate.apply(str)
-    data['tradedate'] = pd.DatetimeIndex(data.tradedate)
 
-    prime_close.index = pd.DatetimeIndex(prime_close.index)
-
-    close = data.pivot(index='tradedate',
-                       columns='secid',
-                       values='closeprice')
-
-    open_ = data.pivot(index='tradedate',
-                       columns='secid',
-                       values='openprice')
-
-    high = data.pivot(index='tradedate',
-                      columns='secid',
-                      values='highprice')
-
-    low = data.pivot(index='tradedate',
-                     columns='secid',
-                     values='lowprice')
-
-    volume = data.pivot(index='tradedate',
-                        columns='secid',
-                        values='volume')
-
-    total_shares = data.pivot(index='tradedate',
-                              columns='secid',
-                              values='total_shares')
-
-    vwap = data.pivot(index='tradedate',
-                      columns='secid',
-                      values='vwap')
-
-    amt = data.pivot(index='tradedate',
-                     columns='secid',
-                     values='amt')
-
-    free_float_shares = data.pivot(index='tradedate',
-                                   columns='secid',
-                                   values='free_float_shares')
-
-    adjfactor = prime_close / close
-
-    pn_data = dict()
-
-    pn_data['adjclose'] = close
-    pn_data['adjhigh'] = high
-    pn_data['adjlow'] = low
-    pn_data['adjopen'] = open_
-    pn_data['close'] = prime_close
-    pn_data['high'] = high * adjfactor
-    pn_data['low'] = low * adjfactor
-    pn_data['open'] = open_ * adjfactor
-    pn_data['vwap'] = vwap * adjfactor
-    pn_data['volume'] = volume
-    pn_data['total_shares'] = total_shares
-    pn_data['free_float_shares'] = free_float_shares
-    pn_data['adjvwap'] = vwap
-    pn_data['amt'] = amt
-
-    return pn_data
 
 
 def format_factor(factor):

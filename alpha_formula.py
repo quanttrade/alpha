@@ -119,7 +119,7 @@ class Alphas(object):
     # alpha001:(rank(Ts_ArgMax(SignedPower(((returns < 0) ? stddev(returns,
     # 20) : close), 2.), 5)) -0.5)
 
-    def alpha001(self):
+    def worldquant001(self):
         inner = self.close.copy()
         inner[self.returns < 0] = stddev(self.returns, 20)
         return rank(ts_argmax(inner ** 2, 5))
@@ -127,32 +127,32 @@ class Alphas(object):
     # alpha002:(-1 * correlation(rank(delta(log(volume), 2)), rank(((close -
     # open) / open)), 6))
 
-    def alpha002(self):
+    def worldquant002(self):
         df = -1 * correlation(rank(delta(log(self.volume), 2)),
                               rank((self.close - self.open) / self.open), 6)
         return df.replace([-np.inf, np.inf], 0)
 
     # alpha003:(-1 * correlation(rank(open), rank(volume), 10))
 
-    def alpha003(self):
+    def worldquant003(self):
         df = -1 * correlation(rank(self.open), rank(self.volume), 10)
         return df.replace([-np.inf, np.inf], 0)
 
     # alpha004: (-1 * Ts_Rank(rank(low), 9))
 
-    def alpha004(self):
+    def worldquant004(self):
         return -1 * ts_rank(rank(self.low), 9)
 
     #  alpha006: (-1 * correlation(open, volume, 10))
 
-    def alpha006(self):
+    def worldquant006(self):
         df = -1 * correlation(self.open, self.volume, 10)
         return df.replace([-np.inf, np.inf], 0)
 
     # alpha007: ((adv20 < volume) ? ((-1 * ts_rank(abs(delta(close, 7)), 60))
     # * sign(delta(close, 7))) : (-1* 1))
 
-    def alpha007(self):
+    def worldquant007(self):
         adv20 = sma(self.volume, 20)
         alpha = -1 * ts_rank(abs(delta(self.close, 7)),
                              60) * sign(delta(self.close, 7))
@@ -163,7 +163,7 @@ class Alphas(object):
     # alpha008: (-1 * rank(((sum(open, 5) * sum(returns, 5)) -
     # delay((sum(open, 5) * sum(returns, 5)),10))))
 
-    def alpha008(self):
+    def worldquant008(self):
         return -1 * (rank(((ts_sum(self.open, 5) * ts_sum(self.returns, 5)) -
                            delay((ts_sum(self.open, 5) * ts_sum(self.returns, 5)), 10))))
 
@@ -171,7 +171,7 @@ class Alphas(object):
     # ((ts_max(delta(close, 1), 5) < 0) ?delta(close, 1) : (-1 * delta(close,
     # 1))))
 
-    def alpha009(self):
+    def worldquant009(self):
         delta_close = delta(self.close, 1)
         cond_1 = ts_min(delta_close, 5) > 0
         cond_2 = ts_max(delta_close, 5) < 0
@@ -181,7 +181,7 @@ class Alphas(object):
 
     # alpha010: rank(((0 < ts_min(delta(close, 1), 4)) ? delta(close, 1) : ((t
 
-    def alpha010(self):
+    def worldquant010(self):
         delta_close = delta(self.close, 1)
         cond_1 = ts_min(delta_close, 4) > 0
         cond_2 = ts_max(delta_close, 4) < 0
@@ -191,38 +191,38 @@ class Alphas(object):
 
     #  alpha012:(sign(delta(volume, 1)) * (-1 * delta(close, 1)))
 
-    def alpha012(self):
+    def worldquant012(self):
         return sign(delta(self.volume, 1)) * (-1 * delta(self.close, 1))
 
     # alpha013:(-1 * rank(covariance(rank(close), rank(volume), 5)))
 
-    def alpha013(self):
+    def worldquant013(self):
         return -1 * rank(covariance(rank(self.close), rank(self.volume), 5))
 
     # alpha014:((-1 * rank(delta(returns, 3))) * correlation(open, volume,
     # 10))
 
-    def alpha014(self):
+    def worldquant014(self):
         df = correlation(self.open, self.volume, 10)
         df = df.replace([-np.inf, np.inf], 0)
         return -1 * rank(delta(self.returns, 3)) * df
 
     # alpha015:(-1 * sum(rank(correlation(rank(high), rank(volume), 3)), 3))
 
-    def alpha015(self):
+    def worldquant015(self):
         df = correlation(rank(self.high), rank(self.volume), 3)
         df = df.replace([-np.inf, np.inf], 0)
         return -1 * ts_sum(rank(df), 3)
 
     #  alpha016:(-1 * rank(covariance(rank(high), rank(volume), 5)))
 
-    def alpha016(self):
+    def worldquant016(self):
         return -1 * rank(covariance(rank(self.high), rank(self.volume), 5))
 
     # alpha017: (((-1 * rank(ts_rank(close, 10))) * rank(delta(delta(close,
     # 1), 1))) *rank(ts_rank((volume / adv20), 5)))
 
-    def alpha017(self):
+    def worldquant017(self):
         adv20 = sma(self.volume, 20)
         return -1 * (rank(ts_rank(self.close, 10)) *
                      rank(delta(delta(self.close, 1), 1)) *
@@ -231,7 +231,7 @@ class Alphas(object):
     # alpha018: (-1 * rank(((stddev(abs((close - open)), 5) + (close - open))
     # + correlation(close, open,10))))
 
-    def alpha018(self):
+    def worldquant018(self):
         df = correlation(self.close, self.open, 10)
         df = df.replace([-np.inf, np.inf], 0)
         return -1 * (rank((stddev(abs((self.close - self.open)),
@@ -239,14 +239,14 @@ class Alphas(object):
 
     #  alpha019:((-1 * sign(((close - delay(close, 7)) + delta(close, 7)))) *
 
-    def alpha019(self):
+    def worldquant019(self):
         return ((-1 * sign((self.close - delay(self.close, 7)) +
                            delta(self.close, 7))) * (1 + rank(1 + ts_sum(self.returns, 250))))
 
     # alpha020: (((-1 * rank((open - delay(high, 1)))) * rank((open -
     # delay(close, 1)))) * rank((open -delay(low, 1))))
 
-    def alpha020(self):
+    def worldquant020(self):
         return -1 * (rank(self.open - delay(self.high, 1)) *
                      rank(self.open - delay(self.close, 1)) *
                      rank(self.open - delay(self.low, 1)))
@@ -256,7 +256,7 @@ class Alphas(object):
     # stddev(close, 8))) ? 1 : (((1 < (volume / adv20)) || ((volume /adv20) ==
     # 1)) ? 1 : (-1 * 1))))
 
-    def alpha021(self):
+    def worldquant021(self):
         cond_1 = sma(self.close, 8) + \
             stddev(self.close, 8) < sma(self.close, 2)
         cond_2 = sma(self.volume, 20) / self.volume < 1
@@ -268,14 +268,14 @@ class Alphas(object):
     # alpha022:(-1 * (delta(correlation(high, volume, 5), 5) *
     # rank(stddev(close, 20))))
 
-    def alpha022(self):
+    def worldquant022(self):
         df = correlation(self.high, self.volume, 5)
         df = df.replace([-np.inf, np.inf], 0)
         return -1 * delta(df, 5) * rank(stddev(self.close, 20))
 
     # alpha023: (((sum(high, 20) / 20) < high) ? (-1 * delta(high, 2)) : 0)
 
-    def alpha023(self):
+    def worldquant023(self):
         cond = sma(self.high, 20) < self.high
         alpha = pd.DataFrame(np.zeros_like(self.close), index=self.close.index,
                              columns=self.close.columns)
@@ -286,7 +286,7 @@ class Alphas(object):
     # 0.05) ||((delta((sum(close, 100) / 100), 100) / delay(close, 100)) ==
     # 0.05)) ? (-1 * (close - ts_min(close,100))) : (-1 * delta(close, 3)))
 
-    def alpha024(self):
+    def worldquant024(self):
         cond = delta(sma(self.close, 100), 100) / \
             delay(self.close, 100) <= 0.05
         alpha = -1 * delta(self.close, 3)
@@ -295,7 +295,7 @@ class Alphas(object):
 
     # alpha026:(-1 * ts_max(correlation(ts_rank(volume, 5), ts_rank(high, 5),
     # 5), 3))
-    def alpha026(self):
+    def worldquant026(self):
         df = correlation(ts_rank(self.volume, 5), ts_rank(self.high, 5), 5)
         df = df.replace([-np.inf, np.inf], 0)
         return -1 * ts_max(df, 3)
@@ -303,7 +303,7 @@ class Alphas(object):
     # alpha028:scale(((correlation(adv20, low, 5) + ((high + low) / 2)) -
     # close))
 
-    def alpha028(self):
+    def worldquant028(self):
         adv20 = sma(self.volume, 20)
         df = correlation(adv20, self.low, 5)
         df = df.replace([-np.inf, np.inf], 0)
@@ -312,7 +312,7 @@ class Alphas(object):
     # alpha029:(min(product(rank(rank(scale(log(sum(ts_min(rank(rank((-1 *
     # rank(delta((close - 1),5))))), 2), 1))))), 1), 5) + ts_rank(delay((-1 *
     # returns), 6), 5))
-    def alpha029(self):
+    def worldquant029(self):
         return (ts_min(rank(rank(scale(log(ts_sum(rank(rank(-1 * rank(delta((self.close - 1), 5)))), 2))))),
                        5) + ts_rank(delay((-1 * self.returns), 6), 5))
 
@@ -320,7 +320,7 @@ class Alphas(object):
     # sign((delay(close, 1) - delay(close, 2)))) +sign((delay(close, 2) -
     # delay(close, 3)))))) * sum(volume, 5)) / sum(volume, 20))
 
-    def alpha030(self):
+    def worldquant030(self):
         delta_close = delta(self.close, 1).copy()
         inner = sign(delta_close) + sign(delay(delta_close, 1)) + \
             sign(delay(delta_close, 2))
@@ -330,7 +330,7 @@ class Alphas(object):
     # alpha031:((rank(rank(rank(decay_linear((-1 * rank(rank(delta(close,
     # 10)))), 10)))) + rank((-1 *delta(close, 3)))) +
     # sign(scale(correlation(adv20, low, 12))))
-    def alpha031(self):
+    def worldquant031(self):
         adv20 = sma(self.volume, 20)
         df = correlation(adv20, self.low, 12)
         df = df.replace([-np.inf, np.inf], 0)
@@ -339,12 +339,12 @@ class Alphas(object):
 
     # alpha033: rank((-1 * ((1 - (open / close))^1)))
 
-    def alpha033(self):
+    def worldquant033(self):
         return rank(-1 + (self.open / self.close))
 
     # alpha034: rank(((1 - rank((stddev(returns, 2) / stddev(returns, 5)))) +
 
-    def alpha034(self):
+    def worldquant034(self):
         inner = (stddev(self.returns, 2) / stddev(self.returns, 5)).copy()
         inner = inner.replace([-np.inf, np.inf], 1).fillna(value=1)
         return rank(2 - rank(inner) - rank(delta(self.close, 1)))
@@ -352,7 +352,7 @@ class Alphas(object):
     # alpha035:((Ts_Rank(volume, 32) * (1 - Ts_Rank(((close + high) - low),
     # 16))) * (1 -Ts_Rank(returns, 32)))
 
-    def alpha035(self):
+    def worldquant035(self):
         return ((ts_rank(self.volume, 32) *
                  (1 - ts_rank(self.close + self.high - self.low, 16))) *
                 (1 - ts_rank(self.returns, 32)))
@@ -360,13 +360,13 @@ class Alphas(object):
     # alpha037:(rank(correlation(delay((open - close), 1), close, 200)) +
     # rank((open - close)))
 
-    def alpha037(self):
+    def worldquant037(self):
         return rank(correlation(delay(self.open - self.close, 1),
                                 self.close, 200)) + rank(self.open - self.close)
 
     # alpha038: ((-1 * rank(Ts_Rank(close, 10))) * rank((close / open)))
 
-    def alpha038(self):
+    def worldquant038(self):
         inner = (self.close / self.open).copy()
         inner = inner.replace([-np.inf, np.inf], 1).fillna(value=1)
         return -1 * rank(ts_rank(self.open, 10)) * rank(inner)
@@ -374,7 +374,7 @@ class Alphas(object):
     # alpha039:((-1 * rank((delta(close, 7) * (1 - rank(decay_linear((volume /
     # adv20), 9)))))) * (1 +rank(sum(returns, 250))))
 
-    def alpha039(self):
+    def worldquant039(self):
         adv20 = sma(self.volume, 20)
         return ((-1 * rank(delta(self.close,
                                  7) * (1 - rank(decay_linear(self.volume / adv20,
@@ -383,7 +383,7 @@ class Alphas(object):
 
     # alpha040: ((-1 * rank(stddev(high, 10))) * correlation(high, volume, 10))
 
-    def alpha040(self):
+    def worldquant040(self):
         df = -1 * rank(stddev(self.high, 10)) * \
             correlation(self.high, self.volume, 10)
         return df.replace([-np.inf, np.inf], 0)
@@ -391,14 +391,14 @@ class Alphas(object):
     # alpha43: (ts_rank((volume / adv20), 20) * ts_rank((-1 * delta(close,
     # 7)), 8))
 
-    def alpha043(self):
+    def worldquant043(self):
         adv20 = sma(self.volume, 20)
         return ts_rank(self.volume / adv20, 20) * \
             ts_rank((-1 * delta(self.close, 7)), 8)
 
     # alpha04: (-1 * correlation(high, rank(volume), 5))
 
-    def alpha044(self):
+    def worldquant044(self):
         df = correlation(self.high, rank(self.volume), 5)
         df = df.replace([-np.inf, np.inf], 0)
         return -1 * df
@@ -407,7 +407,7 @@ class Alphas(object):
     # correlation(close, volume, 2)) *rank(correlation(sum(close, 5),
     # sum(close, 20), 2))))
 
-    def alpha045(self):
+    def worldquant045(self):
         df = correlation(self.close, self.volume, 2)
         df = df.replace([-np.inf, np.inf], 0)
         return -1 * (rank(sma(delay(self.close, 5), 20)) * df *
@@ -415,7 +415,7 @@ class Alphas(object):
 
     # alpha046: ((0.25 < (((delay(close, 20) - delay(close, 10)) / 10) - ((del
 
-    def alpha046(self):
+    def worldquant046(self):
         inner = (((delay(self.close, 20) - delay(self.close, 10)) /
                   10) - ((delay(self.close, 10) - self.close) / 10)).copy()
         alpha = (-1 * delta(self.close))
@@ -427,7 +427,7 @@ class Alphas(object):
     # ((delay(close, 10) - close) / 10)) < (-1 *0.1)) ? 1 : ((-1 * 1) * (close
     # - delay(close, 1))))
 
-    def alpha049(self):
+    def worldquant049(self):
         inner = ((((delay(self.close, 20) - delay(self.close, 10)) /
                    10) - ((delay(self.close, 10) - self.close) / 10))).copy()
         alpha = (-1 * delta(self.close))
@@ -438,7 +438,7 @@ class Alphas(object):
     # ((delay(close, 10) - close) / 10)) < (-1 *0.05)) ? 1 : ((-1 * 1) *
     # (close - delay(close, 1))))
 
-    def alpha051(self):
+    def worldquant051(self):
         inner = ((((delay(self.close, 20) - delay(self.close, 10)) /
                    10) - ((delay(self.close, 10) - self.close) / 10))).copy()
         alpha = (-1 * delta(self.close))
@@ -452,14 +452,14 @@ class Alphas(object):
     # alpha053:(-1 * delta((((close - low) - (high - close)) / (close - low)),
     # 9))
 
-    def alpha053(self):
+    def worldquant053(self):
         inner = ((self.close - self.low).replace(0, 0.0001)).copy()
         return -1 * \
             delta((((self.close - self.low) - (self.high - self.close)) / inner), 9)
 
     # alpha054:((-1 * ((low - close) * (open^5))) / ((low - high) * (close^5)))
 
-    def alpha054(self):
+    def worldquant054(self):
         inner = ((self.low - self.high).replace(0, -0.0001)).copy()
         return -1 * (self.low - self.close) * (self.open ** 5) / \
             (inner * (self.close ** 5))
@@ -467,7 +467,7 @@ class Alphas(object):
     # alpha055: (-1 * correlation(rank(((close - ts_min(low, 12)) /
     # (ts_max(high, 12) - ts_min(low,12)))), rank(volume), 6))
 
-    def alpha055(self):
+    def worldquant055(self):
         divisor = (
             ts_max(
                 self.high,
@@ -483,7 +483,7 @@ class Alphas(object):
 
     # alpha060: (0 - (1 * ((2 * scale(rank(((((close - low) - (high - close))
 
-    def alpha060(self):
+    def worldquant060(self):
         divisor = (self.high - self.low).replace(0, 0.0001)
         inner = (((self.close - self.low) - (self.high - self.close))
                  * self.volume / divisor).copy()

@@ -156,6 +156,17 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return):
     barra_factor['Volatility']=0.74 * pn_data['DASTD'] + \
         0.16 * pn_data['CMRA']
 
+    vol = barra_factor['Volatility']
+    size = barra_factor['size']
+    beta = barra_factor['Beta']
+
+    beta_size = pd.concat([beta, size], axis=1)
+
+    model = sm.OLS(vol, beta_size).fit()
+    vol_resid = model.resid
+
+    barra_factor['Volatility'] = vol_resid
+
     barra_factor = barra_factor.apply(lambda x: standardize_cap_day(x, cap))
 
     pn_data[u'行业'] = map(lambda x: x[2:], pn_data[u'行业'])
