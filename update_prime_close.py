@@ -23,6 +23,10 @@ cursor = conn.cursor()
 
 sql = "INSERT INTO stock_price VALUES (%s, %s, %s)"
 
+if dt.hour < 16:
+    date_before = w.tdaysoffset(-1, dt).Data[0][0]
+    date_before =  ''.join(str(date_before).split(' ')[0].split('-'))
+    dt = date_before
 
 cursor.execute('select max(tradedate) from stock_price;')
 last_date = cursor.fetchall()[0].values()[0]

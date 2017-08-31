@@ -23,13 +23,6 @@ def get_fundmental_day(date):
 
 def create_daily_barra_factor(fundmental, price_data, benchmark_return):
 
-    #change fundmental format
-    fundmental = fundmental[fundmental.st == 0]
-    fundmental = fundmental[fundmental.pt == 0]
-    fundmental[u'日期'] = map(str, fundmental[u'日期'])
-    fundmental[u'日期'] = pd.DatetimeIndex(fundmental[u'日期'])
-    fundmental[u'代码'] = map(lambda x: x[2:] + '.' + x[:2], fundmental[u'代码'])
-    fundmental = fundmental.set_index(u'代码')
 
     #load the basic data of price and volume
     date = fundmental[u'日期'][0]
@@ -139,7 +132,7 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return):
     pn_data[u'行业'] = fundmental[u'行业']
 
     pn_data_fill = pn_data.groupby(u'行业').apply(lambda x: x.fillna(x.quantile()))
-    pn_data_fill.index = pn_data.index
+    pn_data_fill.index = pn_data_fill.index.get_level_values(u'代码')
     del pn_data_fill[u'行业']
     pn_data_fill = pn_data_fill.apply(lambda x: standardize_cap_day(mad_method(x), cap))
     pn_data_fill[u'行业'] = pn_data[u'行业']
@@ -176,10 +169,8 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return):
 
     return barra_factor
 
-if __name__ == '__main__':
 
-    date = '20170829'
-    length = 540
+def get_basic_data(date, length):
     begin_date = w.tdaysoffset(-length, date).Data[0][0]
     begin_date = ''.join(str(begin_date).split(' ')[0].split('-'))
 
@@ -195,23 +186,59 @@ if __name__ == '__main__':
     cursor.execute('select distinct * from stockprice where tradedate<=%s and tradedate>=%s;' %(int(date), int(begin_date)))
     data = cursor.fetchall()
     data = pd.DataFrame(data)
-    print data
 
-    data.to_hdf('D:\data\daily_data\data.h5','table')
+    #close
     cursor.execute('select distinct * from stock_price where tradedate<=%s and tradedate>=%s;' %(int(date), int(begin_date)))
     prime_close = cursor.fetchall()
     prime_close = pd.DataFrame(prime_close)
     prime_close = prime_close.pivot(index='tradedate',columns='secid',values='prime_close')
-    print prime_close
 
-    prime_close.to_excel('D:\data\daily_data\prime_close.xlsx')
+
+
+    # handle the fundmenl data from Tinysoft
 
     fundmental = get_fundmental_day(int(date))
-    print fundmental.to_excel('D:\data\daily_data\\fundmental.xlsx')
+    if not fundmental.empty:
+
+        fundmental_col = list(fundmental.columns)
+        for i in range(len(fundmental_col)):
+            fundmental_col[i] = fundmental_col[i].decode('utf-8')
+
+        fundmental.columns = fundmental_col
+
+        fundmental = fundmental[fundmental.st == 0]
+        fundmental = fundmental[fundmental.pt == 0]
+
+        fundmental[u'日期'] = map(str, fundmental[u'日期'])
+        fundmental[u'日期'] = pd.DatetimeIndex(fundmental[u'日期'])
+        fundmental[u'代码'] = map(lambda x: x[2:] + '.' + x[:2], fundmental[u'代码'])
+        fundmental = fundmental.set_index(u'代码')
+        fundmental[u'行业'] = fundmental[u'行业'].apply(lambda x: x.decode('utf-8'))
+    else:
+        date_before = w.tdaysoffset(-1, date).Data[0][0]
+        date_before =  ''.join(str(date_before).split(' ')[0].split('-'))
+        fundmental = pd.read_hdf('E:\multi_factor\\basic_factor\\fundmental_%s.h5' % date_before, 'table')
+        print "%s的基本面数据为空" % date
+
+
 
     price_data = load_data(data, prime_close)
-    volume = price_data['close']
+    volume = price_data['volume']
     pct_wdqa = w.wsd('881001.WI', 'pct_chg', volume.index[0], volume.index[-1])
     pct_wdqa = pd.Series(pct_wdqa.Data[0], index=volume.index) / 100.0
-    barra_factor = create_daily_barra_factor(fundmental, price_data, pct_wdqa)
-    print barra_factor
+    return fundmental, pd.Panel(price_data), pct_wdqa
+
+
+if __name__ == '__main__':
+    tradedate = w.tdays('2017-08-26', '2017-08-30').Data[0]
+    tradedate =  map(lambda x:''.join(str(x).split(' ')[0].split('-')), tradedate)
+    length = 540
+    for date in tradedate:
+        print date
+        fundmental, price_data, pct_wdqa = get_basic_data(date, length)
+        fundmental.to_hdf('E:\multi_factor\\basic_factor\\fundmental_%s.h5' % date, 'table')
+        price_data.to_hdf('E:\multi_factor\\basic_factor\price_data_%s.h5' % date, 'table')
+        barra_factor = create_daily_barra_factor(fundmental, price_data, pct_wdqa)
+        barra_factor.to_hdf('E:\multi_factor\\barra_factor\\%s.h5' % date, 'table')
+        barra_factor['COUNTRY'] = 1
+        print barra_factor

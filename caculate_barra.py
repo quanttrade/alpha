@@ -1,11 +1,49 @@
 import pandas as pd
 import numpy as np
-from barra_factor.py import *
+from barra_factor import *
 
 if __name__ == "__main__":
     fundmental = pd.read_hdf('D:\data\daily_data\\ew.h5', 'ew')
     price_data = pd.read_hdf('D:\data\daily_data\\price_data.h5', 'table')
     pct_wdqa = pd.read_hdf('D:data/daily_data/pct_wdqa.h5', 'table')
+
+    fundmental_col = list(fundmental.columns)
+    for i in range(len(fundmental_col)):
+        fundmental_col[i] = fundmental_col[i].decode('utf-8')
+
+    fundmental.columns = fundmental_col
+
+    fundmental = fundmental[fundmental.st == 0]
+    fundmental = fundmental[fundmental.pt == 0]
+
+    fundmental[u'日期'] = map(str, fundmental[u'日期'])
+    fundmental[u'日期'] = pd.DatetimeIndex(fundmental[u'日期'])
+    fundmental[u'代码'] = map(lambda x: x[2:] + '.' + x[:2], fundmental[u'代码'])
+    #fundmental = fundmental.set_index(u'代码')
+    fundmental[u'行业'] = fundmental[u'行业'].apply(lambda x: x[2:])
+
+    volume = price_data['volume'].ix[:'2017-07-06']
+    fundmental_stack = pd.DataFrame()
+
+    for col in fundmental.columns:
+        if col not in [u'代码', u'日期']:
+            fundmental_value = fundmental.pivot(index=u'日期', columns=u'代码', values=col)
+            fundmental_fill = pd.DataFrame(np.nan, index=volume.index, columns=fundmental_value.columns)
+            fundmental_fill = fundmental_fill.fillna(value=fundmental_value).fillna(method='pad')
+            fundmental_stack[col] = fundmental_fill.stack()
+
+    fundmental = fundmental_stack.copy()
+
+    total_shares = price_data['total_shares'].ix[:'2017-07-06']
+    fundmental['total_shares'] = total_shares
+     fundmental[u'净资产'] = total_shares * fundmental[u'每股净资产']
+     fundmental[u'长期负债'] = total_shares * fundmental[u'每股长期负债']
+     fundmental[u'总负债'] = total_shares * fundmental[u'每股负债']
+
+
+
+
+
 
     pn_data = pd.DataFrame()
     pn_data['LNCAP'] = np.log(fundmental[u'总市值'])
@@ -76,9 +114,13 @@ if __name__ == "__main__":
 
     # Momentum
     Lambda_120=np.power(0.5, 1.0 / 120.0)
-    weight_120=np.array([Lambda_120 ** (241 - i) for i in range(242)])
-    momentum=pct_change.rolling(242 + 21).apply(lambda x: np.average(
+    weight_120=np.array([Lambda_120 ** (503 - i) for i in range(504)])
+    weight_252=np.array([Lambda_120 ** (251 - i) for i in range(252)])
+    momentum_504=pct_change.rolling(504 + 21).apply(lambda x: np.average(
         np.log(1 + x[:-21]), weights=weight_120, axis=0))
+    momentum_252 = pct_change.rolling(252 + 21).apply(lambda x: np.average(
+        np.log(1 + x[:-21]), weights=weight_252, axis=0))
+    momentum = momentum_504.fillna(momentum_252)
     pn_data['RSTR']=momentum.stack()
 
 

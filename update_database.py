@@ -9,15 +9,11 @@ from datetime import datetime
 dt = datetime.now()
 w.start()
 
-def get_yesterday(day):
-    today = datetime.date.today()
-    oneday = datetime.timedelta(days=day)
-    yesterday = today - oneday
-    return yesterday
 
-if dt.hour < 15 and dt.minute < 30:
-    import datetime
-    dt = get_yesterday(1)
+if dt.hour < 16:
+    date_before = w.tdaysoffset(-1, dt).Data[0][0]
+    date_before =  ''.join(str(date_before).split(' ')[0].split('-'))
+    dt = date_before
 
 # 命令如何写可以用命令生成器来辅助完成
 # 定义打印输出函数，用来展示数据使用

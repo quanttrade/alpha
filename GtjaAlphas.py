@@ -162,7 +162,8 @@ class GtjaAlpha(object):
         self.close = pn_data['close']
         self.vwap = pn_data['vwap']
         self.volume = pn_data['volume']
-        self.returns = self.close.pct_change()
+        self.adjclose = pn_data['adjclose']
+        self.returns = self.adjclose.pct_change()
         self.amount = self.volume * self.close
 
     def alpha001(self):
@@ -542,9 +543,6 @@ class GtjaAlpha(object):
     def alpha115(self):
         return rank(correlation(self.high * 0.9 + self.close * 0.1, sma(self.volume, 30), 10)) ** rank(correlation(ts_rank(self.high * 0.5 + self.low * 0.5, 4), ts_rank(self.volume, 10), 7))
 
-    def alpha116(self):
-        return regbeta(self.close, pd.Series(20) + 1, 20)
-
     def alpha117(self):
         return ts_rank(self.volume, 32) * (1 - ts_rank((self.close + self.high - self.low), 16)) * (1 - ts_rank(self.returns, 32))
 
@@ -641,9 +639,6 @@ class GtjaAlpha(object):
 
     def alpha145(self):
         return (sma(self.volume, 9) - sma(self.volume, 26)) / sma(self.volume, 12)
-
-    def alpha147(self):
-        return regbeta(sma(self.close, 12), pd.Series(12) + 1, 12)
 
     def alpha148(self):
         return rank(correlation(self.open, ts_sum(sma(self.volume, 60), 9), 6)) - rank(self.open - ts_min(self.open, 14))

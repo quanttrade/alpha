@@ -15,6 +15,7 @@ def load_data(data, prime_close):
     data['tradedate'] = data.tradedate.apply(str)
     data['tradedate'] = pd.DatetimeIndex(data.tradedate)
 
+    prime_close = prime_close.astype(float)
     prime_close.index = pd.DatetimeIndex(prime_close.index)
 
     close = data.pivot(index='tradedate',
@@ -53,7 +54,7 @@ def load_data(data, prime_close):
                                    columns='secid',
                                    values='free_float_shares').astype(float)
 
-    adjfactor = prime_close.astype(float) / close.astype(float)
+    adjfactor = prime_close / close
 
 
 
@@ -73,6 +74,9 @@ def load_data(data, prime_close):
     pn_data['free_float_shares'] = free_float_shares
     pn_data['adjvwap'] = vwap
     pn_data['amt'] = amt
+
+    for key in pn_data.keys():
+        pn_data[key] = pn_data[key].fillna(method='pad')
 
     return pn_data
 
@@ -144,7 +148,8 @@ def beta_value(pct_change, benchmark_returns):
         try:
             ols = pd.stats.ols.MovingOLS(y=pct_change_weight[stk],
                                          x=benchmark_returns_weight,
-                                         window=250,
+                                         window_type='rolling',
+                                         window=252,
                                          intercept=True)
 
             beta[stk].ix[ols.beta.x.index] = ols.beta.x
@@ -153,6 +158,7 @@ def beta_value(pct_change, benchmark_returns):
         except Exception as e:
             print e
             beta[stk] = np.NaN
+
             beta[stk] = np.NaN
 
     return beta, resid

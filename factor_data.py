@@ -165,7 +165,8 @@ class GtjaAlpha(object):
         self.close = pn_data['close']
         self.vwap = pn_data['vwap']
         self.volume = pn_data['volume']
-        self.returns = self.close.pct_change()
+        self.adjclose = pn_data['adjclose']
+        self.returns = self.adjclose.pct_change()
         self.amount = self.volume * self.close
 
     def alpha001(self):
