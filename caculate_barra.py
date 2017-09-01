@@ -4,14 +4,10 @@ from barra_factor import *
 
 if __name__ == "__main__":
     fundmental = pd.read_hdf('D:\data\daily_data\\ew.h5', 'ew')
-    price_data = pd.read_hdf('D:\data\daily_data\\price_data.h5', 'table')
+    price_data = pd.read_hdf('D:\data\daily_data\\price_data_original.h5', 'table')
     pct_wdqa = pd.read_hdf('D:data/daily_data/pct_wdqa.h5', 'table')
 
-    fundmental_col = list(fundmental.columns)
-    for i in range(len(fundmental_col)):
-        fundmental_col[i] = fundmental_col[i].decode('utf-8')
 
-    fundmental.columns = fundmental_col
 
     fundmental = fundmental[fundmental.st == 0]
     fundmental = fundmental[fundmental.pt == 0]
@@ -29,16 +25,16 @@ if __name__ == "__main__":
         if col not in [u'代码', u'日期']:
             fundmental_value = fundmental.pivot(index=u'日期', columns=u'代码', values=col)
             fundmental_fill = pd.DataFrame(np.nan, index=volume.index, columns=fundmental_value.columns)
-            fundmental_fill = fundmental_fill.fillna(value=fundmental_value).fillna(method='pad')
+            fundmental_fill = fundmental_fill.fillna(value=fundmental_value).fillna(method='pad', limit=23)
             fundmental_stack[col] = fundmental_fill.stack()
 
     fundmental = fundmental_stack.copy()
 
     total_shares = price_data['total_shares'].ix[:'2017-07-06']
-    fundmental['total_shares'] = total_shares
-     fundmental[u'净资产'] = total_shares * fundmental[u'每股净资产']
-     fundmental[u'长期负债'] = total_shares * fundmental[u'每股长期负债']
-     fundmental[u'总负债'] = total_shares * fundmental[u'每股负债']
+    fundmental['total_shares'] = total_shares.stack()
+    fundmental[u'净资产'] = fundmental['total_shares'] * fundmental[u'每股净资产']
+    fundmental[u'长期负债'] = fundmental['total_shares'] * fundmental[u'每股长期负债']
+    fundmental[u'总负债'] = fundmental['total_shares'] * fundmental[u'每股负债']
 
 
 
@@ -106,9 +102,14 @@ if __name__ == "__main__":
     weight=pd.Series([Lambda_60 ** (pct_change.shape[0] - i - 1) for i in range(pct_change.shape[0])],
                        index=pct_change.index)
     weight_60=np.array([Lambda_60 ** (249 - i) for i in range(250)])
-    hsigma=resid.divide(weight, axis=0).rolling(250).apply(
+    weight_120 = np.array([Lambda_60 ** (119 - i) for i in range(120)])
+    hsigma_250=resid.divide(weight, axis=0).rolling(250).apply(
         lambda x: np.sqrt(np.average((x - x.mean(axis=0))
                           ** 2, weights=weight_60, axis=0)))
+    hsigma_120 = resid.divide(weight, axis=0).rolling(120).apply(
+        lambda x: np.sqrt(np.average((x - x.mean(axis=0))
+                          ** 2, weights=weight_120, axis=0)))
+    hsigma = hsigma_250.fillna(hsigma_120)
     pn_data['HSIGMA']=hsigma.stack()
 
 
@@ -148,3 +149,25 @@ if __name__ == "__main__":
         0.35 * pn_data['STOQ'] + 0.3 * pn_data['STOA']
     barra_factor['Volatility']=0.74 * pn_data['DASTD'] + \
         0.16 * pn_data['CMRA'] + 0.1 * pn_data['HSIGMA']
+
+    industry = pn_data[u'行业'].copy()
+
+    industry_set = set(industry)
+
+    for industry_name in industry_set:
+        barra_factor[industry_name] = 0
+        temp = barra_factor[industry_name]
+        temp[industry == industry_name] = 1
+        barra_factor[industry_name] = temp
+
+    vol = barra_factor['Volatility'].unstack()
+    vol_regress = neutralize(vol, barra_factor[['Size','Beta']])
+    barra_factor['Volatility'] = standardize_cap(vol_regress.astype(float), cap).stack()
+
+    for s in barra_factor.columns[:10]:
+        print s
+        temp = barra_factor[s].unstack()
+        temp = standardize_cap(temp, cap)
+        barra_factor[s] = temp.stack()
+
+    barra_factor['COUNTRY'] = 1

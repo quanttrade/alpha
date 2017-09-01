@@ -672,7 +672,7 @@ class GtjaAlpha(object):
         return rank(1.0 / self.close) * self.volume / sma(self.volume, 20) * (self.high *rank(self.high - self.close)) / (ts_sum(self.high, 5) / 5) - rank(self.vwap - delay(self.vwap))
 
     def gtja171(self):
-        return -1 * (self.low - self.close) * (self.open ** 5) / ((self.close - self.high) ** (self.close **５))
+        return -1 * (self.low - self.close) * (self.open ** 5) / ((self.close - self.high) ** (self.close ** 5))
 
     def gtja174(self):
         return sumif(stddev(self.close, 20), 20, self.close > delay(self.close)) / 20.0

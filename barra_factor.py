@@ -125,7 +125,7 @@ def standardize_cap(factor, cap):
     factor_cap = factor.copy()
     for date in factor.index:
         factor_t = factor_cap.ix[date].dropna()
-        cap_t = cap.ix[date].ix[factor_t.index]
+        cap_t = cap.ix[date].ix[factor_t.index].fillna(0)
         factor_cap_average = np.average(factor_t, weights=cap_t)
         factor_cap.ix[date] = (factor_cap.ix[date] -
                                factor_cap_average) / factor_t.std()
@@ -294,7 +294,7 @@ def industry_factor(hangye_class):
     hangye_dict = dict()
 
     for industry in hangye:
-        temp = pd.Series(0, index=hangye.index)
+        temp = pd.Series(0, index=hangye)
         temp[hangye == industry] = 1
         hangye_dict[industry] = temp
 

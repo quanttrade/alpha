@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 def maxdrawdown(net_value):
-    draw_down = pd.Series([(net_value.iloc[i] - net_value[i:].min()) / net_value.iloc[i] for i in range(len(net_value) - 1)], index=net_value.index[:-1])
+    draw_down = pd.Series([(net_value.iloc[:i + 1].max() - net_value.iloc[i]) / net_value.iloc[:i].max() for i in range(len(net_value) - 1)], index=net_value.index[:-1])
 
     maxdrawdown_value = draw_down.max()
     """

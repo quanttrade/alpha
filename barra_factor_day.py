@@ -8,10 +8,12 @@ import ts_api_demo as ts
 import pymysql
 from WindPy import w
 w.start()
+from GtjaAlphas import *
 
 
 
 def standardize_cap_day(factor, cap):
+    cap = cap.ix[factor.index].fillna(0)
     return (factor - np.average(factor, weights=cap)) / factor.std()
 
 def standardize_day_factor(factor):
@@ -21,16 +23,22 @@ def get_fundmental_day(date):
     return ts.get_barra_factor(date, date)
 
 
-def create_daily_barra_factor(fundmental, price_data, benchmark_return):
+def create_daily_barra_factor(fundmental, price_data, benchmark_return, resid_return):
 
 
     #load the basic data of price and volume
     date = fundmental[u'日期'][0]
     total_shares = price_data['total_shares'].ix[date][fundmental.index]
-    volume = price_data['total_shares'][fundmental.index]
+    volume = price_data['volume'][fundmental.index]
     free_float_shares = price_data['free_float_shares'][fundmental.index]
     adjclose = price_data['adjclose'][fundmental.index]
     cap = (price_data['total_shares'] * price_data['close']).ix[date][fundmental.index]
+    resid_ret = resid_return.ix[:date].copy()
+    for stk in fundmental.index:
+        if stk not in resid_ret.columns:
+            resid_ret[stk] = np.nan
+
+
 
     fundmental[u'净资产'] = total_shares * fundmental[u'每股净资产']
     fundmental[u'长期负债'] = total_shares * fundmental[u'每股长期负债']
@@ -67,16 +75,16 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return):
     pn_data['STOA'] = np.log(1 / 12.0 * (volume / free_float_shares)[-252:].rolling(252).sum()).replace([-np.inf, np.inf], 0).iloc[-1]
 
     #beta
-    beta = pd.Series(0.0, index=fundmental.index)
-    resid_returns = pd.Series(0.0, fundmental.index)
-    close_limit = adjclose[-253:]
+    beta = pd.Series(0.0, index=resid_ret.columns)
+    resid_returns = pd.Series(0.0, index=resid_ret.columns)
+    close_limit = price_data['adjclose'][-253:]
     stock_returns = close_limit.pct_change()[1:]
     Lambda_63 = np.power(0.5, 1 / 63.0)
 
 
     for stock in beta.index:
         returns_stock = stock_returns[stock].copy()
-        volume_t = volume[stock].ix[returns_stock.index]
+        volume_t = price_data['volume'][stock].ix[returns_stock.index]
         #returns_stock[volume_t == 0] = np.nan
         returns_stock = returns_stock.dropna()
         N = returns_stock.shape[0]
@@ -95,13 +103,17 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return):
         beta[stock] = model_res.params.beta
         resid_returns[stock] = model_res.params.const
 
-    pn_data['BETA'] = beta
+    pn_data['BETA'] = beta[fundmental.index]
+
+
+    resid_ret.ix[date] = resid_returns
+    resid_ret.to_hdf('E:\multi_factor\\basic_factor\\resid_return.h5', 'table')
 
 
     # Volatility
     Lambda_42 = np.power(0.5, 1 / 42.0)
     weight_42 = np.array([Lambda_42 ** (252 - i) for i in range(252)])
-    excess_return = (stock_returns.T - benchmark_return.ix[stock_returns.index]).T
+    excess_return = (stock_returns[fundmental.index].T - benchmark_return.ix[stock_returns.index]).T
     excess_return_square = (excess_return - excess_return.mean(axis=0)) ** 2
     dastd = np.sqrt(np.average(excess_return_square, weights=weight_42, axis=0))
     pn_data['DASTD'] = dastd
@@ -114,9 +126,17 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return):
         returns_array=np.array([x[-1] / x[-21 * T] for T in range(1, 13)])
         return returns_array.min(axis=0)
 
-    cmra = max_cumulative_returns(close_limit.values) / min_cumulative_returns(close_limit.values)\
+    cmra = max_cumulative_returns(close_limit[fundmental.index].values) / min_cumulative_returns(close_limit[fundmental.index].values)\
 
     pn_data['CMRA'] = cmra
+
+    Lambda_60=np.power(0.5, 1 / 60.0)
+    weight_60=np.array([Lambda_60 ** (251 - i) for i in range(252)])
+    resid = resid_ret[-253:]
+    hsigma = resid.rolling(252).apply(
+        lambda x: np.sqrt(np.average((x - x.mean(axis=0))** 2, weights=weight_60, axis=0))).iloc[-1]
+    pn_data['HSIGMA'] = hsigma.ix[fundmental.index]
+
 
 
     # Momentum
@@ -129,7 +149,8 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return):
 
     pn_data['RSTR'] = momentum
 
-    pn_data[u'行业'] = fundmental[u'行业']
+    industry_stock = pd.Series(w.wss(list(pn_data.index), "industry2","industryType=1;industryStandard=1;tradeDate=%s" % date).Data[0], index=pn_data.index)
+    pn_data[u'行业'] = industry_stock
 
     pn_data_fill = pn_data.groupby(u'行业').apply(lambda x: x.fillna(x.quantile()))
     pn_data_fill.index = pn_data_fill.index.get_level_values(u'代码')
@@ -154,10 +175,10 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return):
     barra_factor['Liquidity']=0.35 * pn_data['STOM'] + \
         0.35 * pn_data['STOQ'] + 0.3 * pn_data['STOA']
     barra_factor['Volatility']=0.74 * pn_data['DASTD'] + \
-        0.16 * pn_data['CMRA']
+        0.16 * pn_data['CMRA'] + 0.1 * pn_data['HSIGMA']
 
     vol = barra_factor['Volatility']
-    size = barra_factor['size']
+    size = barra_factor['Size']
     beta = barra_factor['Beta']
 
     beta_size = pd.concat([beta, size], axis=1)
@@ -207,9 +228,15 @@ def get_basic_data(date, length):
 
 
     # handle the fundmenl data from Tinysoft
+    flag = False
+    try:
+        fundmental = pd.read_hdf('E:\multi_factor\\basic_factor\\fundmental_%s.h5' % date, 'table')
+    except Exception as e:
+        print e
+        fundmental = get_fundmental_day(int(date))
+        flag = True
 
-    fundmental = get_fundmental_day(int(date))
-    if not fundmental.empty:
+    if not fundmental.empty and flag:
 
         fundmental_col = list(fundmental.columns)
         for i in range(len(fundmental_col)):
@@ -224,8 +251,9 @@ def get_basic_data(date, length):
         fundmental[u'日期'] = pd.DatetimeIndex(fundmental[u'日期'])
         fundmental[u'代码'] = map(lambda x: x[2:] + '.' + x[:2], fundmental[u'代码'])
         fundmental = fundmental.set_index(u'代码')
-        fundmental[u'行业'] = fundmental[u'行业'].apply(lambda x: x.decode('utf-8'))
-    else:
+        fundmental[u'行业'] = fundmental[u'行业'].apply(lambda x: x[2:].decode('utf-8'))
+
+    elif flag:
         date_before = w.tdaysoffset(-1, date).Data[0][0]
         date_before =  ''.join(str(date_before).split(' ')[0].split('-'))
         fundmental = pd.read_hdf('E:\multi_factor\\basic_factor\\fundmental_%s.h5' % date_before, 'table')
@@ -241,15 +269,45 @@ def get_basic_data(date, length):
 
 
 if __name__ == '__main__':
-    tradedate = w.tdays('2017-08-26', '2017-08-30').Data[0]
+    tradedate = w.tdays('2017-08-31', '2017-09-01').Data[0]
     tradedate =  map(lambda x:''.join(str(x).split(' ')[0].split('-')), tradedate)
     length = 540
+
     for date in tradedate:
         print date
         fundmental, price_data, pct_wdqa = get_basic_data(date, length)
+        resid_ret = pd.read_hdf('E:\multi_factor\\basic_factor\\resid.return.h5','table')
         fundmental.to_hdf('E:\multi_factor\\basic_factor\\fundmental_%s.h5' % date, 'table')
         price_data.to_hdf('E:\multi_factor\\basic_factor\price_data_%s.h5' % date, 'table')
-        barra_factor = create_daily_barra_factor(fundmental, price_data, pct_wdqa)
-        barra_factor.to_hdf('E:\multi_factor\\barra_factor\\%s.h5' % date, 'table')
+        barra_factor = create_daily_barra_factor(fundmental, price_data, pct_wdqa, resid_ret)
         barra_factor['COUNTRY'] = 1
+        barra_factor.to_hdf('E:\multi_factor\\barra_factor\\%s.h5' % date, 'table')
         print barra_factor
+
+"""
+        Alpha = GtjaAlpha(price_data)
+        alpha_function = GtjaAlpha.__dict__.keys()
+        alpha_function.sort()
+        alpha_function = alpha_function[5:]
+        cap = price_data['close'] * price_data['total_shares']
+        alpha_facor = pd.DataFrame()
+
+        for alpha_name in alpha_function:
+            print "========================caculating %s =============================" % alpha_name
+            try:
+                alpha = eval('Alpha.%s()' % alpha_name).dropna(how='all')
+
+                # cleaning and standardize alpha data
+                alpha = alpha.replace([-np.inf, np.inf], np.nan)
+
+                alpha = standardize_cap_day(alpha.iloc[-1], cap.iloc[-1])
+
+                alpha = alpha.ix[barra_factor.index]
+                alpha = alpha.fillna(alpha.quantile())
+                del barra_factor['COUNTRY']
+                model = sm.OLS(alpha, barra_factor).fit()
+                alpha_factor[alpha_name] = standardize_cap_day(model.resid, cap.iloc[-1])
+
+        alpha_factor.to_hdf('E:\multi_factor\\alpha_factor\\%s.h5' % date, 'table')
+        print alpha_factor
+"""
