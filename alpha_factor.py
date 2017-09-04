@@ -12,14 +12,23 @@ if __name__ == "__main__":
     alpha_function = alpha_function[5:]
 
     # load price and volume data
-    price_data = pd.read_hdf('D:\data\daily_data\\price_data.h5', 'table')
+    price_data = dict(pd.read_hdf('E:\multi_factor\price_data\price_data.h5', 'table'))
+
+    for key in price_data.keys():
+        data = price_data[key].copy()
+        data = data[-500:]
+        price_data[key] = data
+
+    price_data = pd.Panel(price_data)
+
     gtja = GtjaAlpha(price_data)
     cap = price_data['close'] * price_data['total_shares']
     begin_date = '2007-01-31'
-    tradedate = w.tdays('2007-01-31', '2017-07-06').Data[0]
+    tradedate = w.tdays('2017-01-01', '2017-09-01').Data[0]
     tradedate =  map(lambda x:''.join(str(x).split(' ')[0].split('-')), tradedate)
 
-    for alpha_name in alpha_function:
+
+    for alpha_name in alpha_function[:155]:
         print "========================caculating %s =============================" % alpha_name
         try:
             alpha = eval('gtja.%s()' % alpha_name).dropna(how='all')

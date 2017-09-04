@@ -23,15 +23,14 @@ def get_fundmental_day(date):
     return ts.get_barra_factor(date, date)
 
 
-def create_daily_barra_factor(fundmental, price_data, benchmark_return, resid_return):
+def create_daily_barra_factor(fundmental, price_data, benchmark_return, resid_return, date):
 
 
     #load the basic data of price and volume
-    date = fundmental[u'日期'][0]
     total_shares = price_data['total_shares'].ix[date][fundmental.index]
-    volume = price_data['volume'][fundmental.index]
-    free_float_shares = price_data['free_float_shares'][fundmental.index]
-    adjclose = price_data['adjclose'][fundmental.index]
+    volume = price_data['volume'].ix[:date][fundmental.index]
+    free_float_shares = price_data['free_float_shares'].ix[:date][fundmental.index]
+    adjclose = price_data['adjclose'].ix[:date][fundmental.index]
     cap = (price_data['total_shares'] * price_data['close']).ix[date][fundmental.index]
     resid_ret = resid_return.ix[:date].copy()
     for stk in fundmental.index:
@@ -77,14 +76,14 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return, resid_re
     #beta
     beta = pd.Series(0.0, index=resid_ret.columns)
     resid_returns = pd.Series(0.0, index=resid_ret.columns)
-    close_limit = price_data['adjclose'][-253:]
+    close_limit = price_data['adjclose'].ix[:date][-253:]
     stock_returns = close_limit.pct_change()[1:]
     Lambda_63 = np.power(0.5, 1 / 63.0)
 
 
     for stock in beta.index:
         returns_stock = stock_returns[stock].copy()
-        volume_t = price_data['volume'][stock].ix[returns_stock.index]
+        volume_t = price_data['volume'].ix[:date][stock].ix[returns_stock.index]
         #returns_stock[volume_t == 0] = np.nan
         returns_stock = returns_stock.dropna()
         N = returns_stock.shape[0]
@@ -105,8 +104,12 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return, resid_re
 
     pn_data['BETA'] = beta[fundmental.index]
 
+    for index in resid_returns.index:
+        if index not in resid_ret.columns:
+            resid_ret[index] = np.nan
 
     resid_ret.ix[date] = resid_returns
+
     resid_ret.to_hdf('E:\multi_factor\\basic_factor\\resid_return.h5', 'table')
 
 
@@ -132,7 +135,7 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return, resid_re
 
     Lambda_60=np.power(0.5, 1 / 60.0)
     weight_60=np.array([Lambda_60 ** (251 - i) for i in range(252)])
-    resid = resid_ret[-253:]
+    resid = resid_ret.ix[-253:]
     hsigma = resid.rolling(252).apply(
         lambda x: np.sqrt(np.average((x - x.mean(axis=0))** 2, weights=weight_60, axis=0))).iloc[-1]
     pn_data['HSIGMA'] = hsigma.ix[fundmental.index]
@@ -190,7 +193,7 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return, resid_re
 
     barra_factor = barra_factor.apply(lambda x: standardize_cap_day(x, cap))
 
-    pn_data[u'行业'] = map(lambda x: x[2:], pn_data[u'行业'])
+    #pn_data[u'行业'] = map(lambda x: x[2:], pn_data[u'行业'])
 
     industry_set = list(set(pn_data[u'行业']))
 
@@ -202,41 +205,55 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return, resid_re
     return barra_factor
 
 
-def get_basic_data(date, length):
+def get_basic_data(date, length, method='hdf'):
     begin_date = w.tdaysoffset(-length, date).Data[0][0]
     begin_date = ''.join(str(begin_date).split(' ')[0].split('-'))
-
-    conn = pymysql.connect(host='127.0.0.1',
+    if method == 'database':
+        conn = pymysql.connect(host='127.0.0.1',
                            port=3306,
                            user='root',
                            password='lyz940513',
                            db='mysql',
                            charset='utf8mb4',
                            cursorclass=pymysql.cursors.DictCursor)
-    cursor = conn.cursor()
+        cursor = conn.cursor()
 
-    cursor.execute('select distinct * from stockprice where tradedate<=%s and tradedate>=%s;' %(int(date), int(begin_date)))
-    data = cursor.fetchall()
-    data = pd.DataFrame(data)
+        cursor.execute('select distinct * from stockprice where tradedate<=%s and tradedate>=%s;' %(int(date), int(begin_date)))
+        data = cursor.fetchall()
+        data = pd.DataFrame(data)
 
     #close
-    cursor.execute('select distinct * from stock_price where tradedate<=%s and tradedate>=%s;' %(int(date), int(begin_date)))
-    prime_close = cursor.fetchall()
-    prime_close = pd.DataFrame(prime_close)
-    prime_close = prime_close.pivot(index='tradedate',columns='secid',values='prime_close')
+        cursor.execute('select distinct * from stock_price where tradedate<=%s and tradedate>=%s;' %(int(date), int(begin_date)))
+        prime_close = cursor.fetchall()
+        prime_close = pd.DataFrame(prime_close)
+        prime_close = prime_close.pivot(index='tradedate',columns='secid',values='prime_close')
+
+        price_data = pd.Panel(load_data(data, prime_close))
+
+    elif method == 'hdf':
+        price_data = dict(pd.read_hdf('E:\multi_factor\price_data\price_data.h5', 'table'))
+
+        for key in price_data.keys():
+            data = price_data[key].copy()
+            data = data.ix[:date]
+            price_data[key] = data
+
+        price_data = pd.Panel(price_data)
+
+
+
 
 
 
     # handle the fundmenl data from Tinysoft
-    flag = False
+
     try:
-        fundmental = pd.read_hdf('E:\multi_factor\\basic_factor\\fundmental_%s.h5' % date, 'table')
+        fundmental = get_fundmental_day(int(date))
     except Exception as e:
         print e
-        fundmental = get_fundmental_day(int(date))
-        flag = True
 
-    if not fundmental.empty and flag:
+
+    if not fundmental.empty:
 
         fundmental_col = list(fundmental.columns)
         for i in range(len(fundmental_col)):
@@ -251,25 +268,25 @@ def get_basic_data(date, length):
         fundmental[u'日期'] = pd.DatetimeIndex(fundmental[u'日期'])
         fundmental[u'代码'] = map(lambda x: x[2:] + '.' + x[:2], fundmental[u'代码'])
         fundmental = fundmental.set_index(u'代码')
-        fundmental[u'行业'] = fundmental[u'行业'].apply(lambda x: x[2:].decode('utf-8'))
 
-    elif flag:
+
+    else:
         date_before = w.tdaysoffset(-1, date).Data[0][0]
         date_before =  ''.join(str(date_before).split(' ')[0].split('-'))
         fundmental = pd.read_hdf('E:\multi_factor\\basic_factor\\fundmental_%s.h5' % date_before, 'table')
-        print "%s的基本面数据为空" % date
+        print "the data of %s is empty" % date
 
 
 
-    price_data = load_data(data, prime_close)
-    volume = price_data['volume']
+
+    volume = price_data['volume'].ix[:date]
     pct_wdqa = w.wsd('881001.WI', 'pct_chg', volume.index[0], volume.index[-1])
     pct_wdqa = pd.Series(pct_wdqa.Data[0], index=volume.index) / 100.0
-    return fundmental, pd.Panel(price_data), pct_wdqa
+    return fundmental, price_data, pct_wdqa
 
 
 if __name__ == '__main__':
-    tradedate = w.tdays('2017-08-31', '2017-09-01').Data[0]
+    tradedate = w.tdays('2017-07-07', '2017-09-04').Data[0]
     tradedate =  map(lambda x:''.join(str(x).split(' ')[0].split('-')), tradedate)
     length = 540
 
@@ -278,8 +295,9 @@ if __name__ == '__main__':
         fundmental, price_data, pct_wdqa = get_basic_data(date, length)
         resid_ret = pd.read_hdf('E:\multi_factor\\basic_factor\\resid.return.h5','table')
         fundmental.to_hdf('E:\multi_factor\\basic_factor\\fundmental_%s.h5' % date, 'table')
-        price_data.to_hdf('E:\multi_factor\\basic_factor\price_data_%s.h5' % date, 'table')
-        barra_factor = create_daily_barra_factor(fundmental, price_data, pct_wdqa, resid_ret)
+        print fundmental[u'日期'][0]
+        print price_data['close'].index[-1]
+        barra_factor = create_daily_barra_factor(fundmental, price_data, pct_wdqa, resid_ret, date)
         barra_factor['COUNTRY'] = 1
         barra_factor.to_hdf('E:\multi_factor\\barra_factor\\%s.h5' % date, 'table')
         print barra_factor

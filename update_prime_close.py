@@ -40,7 +40,7 @@ tradedate = w.tdays(last_date, dt).Data[0]
 tradedate =  map(lambda x:''.join(str(x).split(' ')[0].split('-')), tradedate)
 for date in tradedate[1:]:
     try:
-        print "更新%s的数据" % date
+        print "update the data of %s" % date
         wsetdata = w.wset(
             'SectorConstituent',
             'date=%s;sectorId=a001010100000000;field=wind_code' % date).Data[0]
