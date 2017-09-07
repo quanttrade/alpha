@@ -45,7 +45,7 @@ for date in tradedate[1:]:
             'SectorConstituent',
             'date=%s;sectorId=a001010100000000;field=wind_code' % date).Data[0]
 
-        wssdata = w.wss(wsetdata, "close","tradeDate=%s;priceAdj=F;cycle=D" %date)
+        wssdata = w.wss(wsetdata, "close","tradeDate=%s;priceAdj=U;cycle=D" %date)
 
         data = np.array(wssdata.Data).T
 

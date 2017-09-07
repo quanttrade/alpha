@@ -18,9 +18,9 @@ if dt.hour < 16:
 
 
 path = 'E:/multi_factor'
-"""
+
 #update benchmark_component
-zz500_component = pd.read_hdf(  ')
+zz500_component = pd.read_hdf(os.path.join(path, 'benchmark_component', 'zz500_component.h5'), 'table')
 l_date = zz500_component.index[-1]
 
 tradedate = w.tdays(l_date, dt).Data[0]
@@ -32,8 +32,8 @@ for date in tradedate:
     zz500_component.ix[date] = data
 
 zz500_component.index = pd.DatetimeIndex(zz500_component.index)
-zz500_component.to_hdf()
-"""
+zz500_component.to_hdf(os.path.join(path, 'benchmark_component', 'zz500_component.h5'), 'table')
+
 
 
 # update price_data
@@ -72,7 +72,7 @@ for date in tradedate[1:]:
     except Exception as e:
         print e
 
-        
+
 
 for item in price_data.keys():
     data = price_data[item]

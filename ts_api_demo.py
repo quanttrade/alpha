@@ -99,8 +99,9 @@ def get_ts_td(BegT, EndT, freq):
 	data = TSLPy2.RemoteCallFunc("get_td", [BegT, EndT, freq],{})
 	return TSResult(data)
 
-y1 = get_ts_td(20081220,20170520,"月线")
-td = [parse(str(x)).strftime('%Y-%m-%d') for x in y1]
+#y1 = get_ts_td(20081220,20170520,"月线")
+#td = [parse(str(x)).strftime('%Y-%m-%d') for x in y1]
+
 
 #import pdb;pdb.set_trace()
 
@@ -141,14 +142,14 @@ def get_ts_close(stk_code,begt,endt,fq):
 	c = pd.DataFrame(TSResult(data))
 	#print(c)
 	return c
-'''
-y4 = get_ts_close('SH000906',20100101,20170630,'日线')
-y5 = get_ts_close('SH000300',20100101,20170630,'日线')
-y4 = y4.set_index('date')
-y5 = y5.set_index('date')
-diff = y4['SH000906'] - y5['SH000300']
-import pdb;pdb.set_trace()
-'''
+
+#y4 = get_ts_close('SH000906',20100101,20110201,'30分钟线')
+#y5 = get_ts_close('SH000300',20100101,20170630,'日线')
+#y4 = y4.set_index('date')
+#y5 = y5.set_index('date')
+#diff = y4['SH000906'] - y5['SH000300']
+#import pdb;pdb.set_trace()
+
 def get_close_all(index,begt,endt,cycle):
 	#tradingday = get_ts_td(begt, endt, cycle)
 	#import pdb;pdb.set_trace()
@@ -229,13 +230,17 @@ def get_barra_factor(start_date, end_date):
 	r = pd.DataFrame(TSResult(data))
 	return r
 
+def get_minute_bar(date):
+	data = TSLPy2.RemoteCallFunc("get_minute_bar",[date],{})
+	r = pd.DataFrame(TSResult(data))
+	return r
+
 
 
 #y8 = get_intraday_prices('沪深300',20161101,20161130,'30分钟线')
 #import pdb;pdb.set_trace()
 
-"""
+
 if __name__=='__main__':
-	px =
+	px =get_minute_bar(20070131)
 	import pdb;pdb.set_trace()
-"""

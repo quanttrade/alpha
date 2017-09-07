@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
 import numpy as np
+import os
 from barra_factor import *
+from datetime import datetime
 from WindPy import w
 import statsmodels.api as sm
 import ts_api_demo as ts
@@ -286,11 +288,18 @@ def get_basic_data(date, length, method='hdf'):
 
 
 if __name__ == '__main__':
-    tradedate = w.tdays('2017-07-07', '2017-09-04').Data[0]
+    dt = datetime.now()
+    if dt.hour < 16:
+        date_before = w.tdaysoffset(-1, dt).Data[0][0]
+        date_before =  ''.join(str(date_before).split(' ')[0].split('-'))
+        dt = date_before
+    date_list = map(lambda x: x.split('.')[0], os.listdir('E:/multi_factor/barra_factor'))
+    last_date = max(date_list)
+    tradedate = w.tdays(last_date, dt).Data[0]
     tradedate =  map(lambda x:''.join(str(x).split(' ')[0].split('-')), tradedate)
     length = 540
 
-    for date in tradedate:
+    for date in tradedate[1:]:
         print date
         fundmental, price_data, pct_wdqa = get_basic_data(date, length)
         resid_ret = pd.read_hdf('E:\multi_factor\\basic_factor\\resid.return.h5','table')
