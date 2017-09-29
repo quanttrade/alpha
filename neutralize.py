@@ -5,11 +5,12 @@ from scipy import stats
 
 
 if __name__ == '__main__':
-    gtja_path = 'E:\gtja_alpha'
+    gtja_path = 'E:\multi_factor\prime_factor'
     alpha_dir = os.listdir(gtja_path)
-    barra_factor = pd.read_hdf('D:data/daily_data/barra_factor_cap.h5','barra_factor')
-    price_data = pd.read_hdf('D:\data\daily_data\\price_data.h5','table')
-    ic_table_neutralize = pd.DataFrame()
+    price_data = pd.read_hdf('E:\multi_factor\price_data\\price_data.h5','table')
+    barra_factor = pd.read_hdf('E:/multi_factor/basic_factor/barra_factor_new.h5', 'table')
+    cap = price_data['close'] * price_data['total_shares']
+    #ic_table_neutralize = pd.DataFrame()
 
 
     for alpha_name in alpha_dir:
@@ -17,12 +18,13 @@ if __name__ == '__main__':
             print alpha_name
             print "============================================"
             path = os.path.join(gtja_path, alpha_name)
-            prime_factor = pd.read_hdf(path + '\\prime_factor.h5', 'table')
-            prime_factor_standard = standardize(winsorize(prime_factor, mad_method))
+            prime_factor = pd.read_hdf(path, 'table')
+            prime_factor_standard = standardize_cap(winsorize(prime_factor, mad_method), cap)
             neutralized_factor = neutralize(prime_factor_standard.ix['2007-01-31':], barra_factor.ix[:,:-1])
-            neutralized_factor.to_hdf(path + '\\neutralize_factor.h5', 'table')
+            neutralized_factor = standardize_cap(neutralized_factor.astype(float), cap)
+            neutralized_factor.to_hdf(os.path.join('E:\multi_factor\\neutralized_factor', alpha_name), 'table')
 
-
+            """
             #get ic and other statistics of factor
             neutralized_factor_stack = neutralized_factor.stack()
             prices = price_data['adjclose'].ix[neutralized_factor_stack.index[0][0]:]
@@ -67,9 +69,10 @@ if __name__ == '__main__':
             ic_summary_table.to_excel(path + '\\ic_summary_table_neutralize.xlsx')
             quantile_turnover_mean.to_excel(
                 path + '\\quantile_turnover_mean_neutralize.xlsx')
+            """
 
         except Exception as e:
             print e
             continue
 
-    ic_table_neutralize.to_csv('D:\data\daily_data\\ic_table_neutralize.csv')
+    #ic_table_neutralize.to_csv('D:\data\daily_data\\ic_table_neutralize.csv')

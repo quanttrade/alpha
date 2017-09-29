@@ -163,9 +163,6 @@ class GtjaAlpha(object):
     def gtja005(self):
         return -1 * ts_max(correlation(ts_rank(self.volume, 5), ts_rank(self.high, 5), 5), 3)
 
-    def gtja006(self):
-        return -1 * (rank(sign(delta((self.open * 0.85) + (self.high * 0.15), 4))))
-
     def gtja007(self):
         return rank(ts_max(self.vwap - self.close, 3)) + rank(ts_min(self.vwap - self.close, 3)) * rank(delta(self.volume, 3))
 
@@ -230,9 +227,6 @@ class GtjaAlpha(object):
     def gtja025(self):
         return -1 * rank(delta(self.close, 7)) * (1 - rank(decay_linear(self.volume / sma(self.volume, 20), 9)) * (1 + rank(ts_sum(self.returns, 250))))
 
-    def gtja026(self):
-        return ts_sum(self.close, 7) / 7 - self.close + correlation(self.vwap, delay(self.close, 5), 230)
-
     def gtja027(self):
         return wma((self.close - delay(self.close, 3)) / delay(self.close, 3) * 100 + (self.close - delay(self.close, 6)) / delay(self.close, 6) * 100, 12)
 
@@ -249,7 +243,7 @@ class GtjaAlpha(object):
         return -1 * ts_sum(rank(correlation(rank(self.high), rank(self.volume), 3)), 3)
 
     def gtja033(self):
-        return -1 * ts_min(self.low, 5) + delay(ts_min(self.low, 5), 5) * rank(ts_sum(self.returns, 240) - ts_sum(self.returns, 20)) * ts_rank(self.volume, 5)
+        return -1 * ts_min(self.low, 5) + delay(ts_min(self.low, 5), 5) * rank(ts_sum(self.returns, 20) - ts_sum(self.returns, 20)) * ts_rank(self.volume, 5)
 
     def gtja034(self):
         return sma(self.close, 12) / self.close
@@ -262,12 +256,6 @@ class GtjaAlpha(object):
 
     def gtja037(self):
         return -1 * ts_rank(ts_sum(self.open, 5) * ts_sum(self.returns, 5) - delay(ts_sum(self.open, 5) * ts_sum(self.returns, 5)), 10)
-
-    def gtja038(self):
-        cond = ts_sum(self.high, 20) / 20 - self.high >= 0
-        alpha = -1 * delta(self.high, 2)
-        alpha[cond] = 0
-        return alpha
 
     def gtja039(self):
         return -rank(decay_linear(delta(self.close, 2), 8)) + rank(decay_linear(correlation(0.3 * self.vwap + 0.7 * self.open, ts_sum(sma(self.volume, 180), 37), 14), 12))
@@ -344,8 +332,6 @@ class GtjaAlpha(object):
         alpha1[cond_1] = 0
         return ts_sum(alpha1, 12) / ts_sum(bound, 12)
 
-    def gtja052(self):
-        return ts_sum(cross_max(0, self.high - delay((self.high + self.low + self.close) / 3, 1)), 26) / ts_sum(cross_max(0, self.high - delay((self.high + self.low + self.close) / 3, 1) - self.low), 26)
 
     def gtja053(self):
         return (self.close > delay(self.close, 1)).rolling(12).sum()
@@ -407,8 +393,6 @@ class GtjaAlpha(object):
     def gtja076(self):
         return stddev((self.close / delay(self.close) - 1).abs() / self.volume, 20) / sma((self.close / delay(self.close) - 1).abs() / self.volume, 20)
 
-    def gtja077(self):
-        return cross_min(rank(decay_linear(self.high / 2.0 + self.low / 2.0 - self.vwap), 20), rank(decay_linear(correlation((self.high + self.low) / 2.0, sma(self.volume, 40), 3), 6)))
 
     def gtja078(self):
         return ((self.high + self.low + self.close) / 3.0 - sma((self.high + self.low + self.close) / 3.0, 12)) / sma((self.close - sma((self.high + self.low + self.close) / 3.0, 12)).abs(), 12)
@@ -431,9 +415,6 @@ class GtjaAlpha(object):
     def gtja085(self):
         return ts_rank(self.volume / sma(self.volume, 20), 20) * ts_rank(-1 * delta(self.close, 7) / self.close, 8)
 
-    def gtja087(self):
-        return -1 * rank(decay_linear(delta(self.vwap, 4), 7)) + ts_rank(decay_linear(self.low - self.vwap) / (self.open - (self.low + self.high) / 2.0, 11), 7)
-
     def gtja088(self):
         return self.close / delay(self.close, 20) - 1
 
@@ -441,7 +422,7 @@ class GtjaAlpha(object):
         return -1 * rank(correlation(rank(self.vwap), rank(self.volume), 5))
 
     def gtja091(self):
-        return -1 * rank(self.close / ts_max(self.close, 5)) * rank(correlation(sma(self.volume, 40), self.low, 5))
+        return -1 * rank(self.close / ts_max(self.close, 5)) * rank(correlation(sma(self.volume, 20), self.low, 5))
 
     def gtja093(self):
         cond = self.open > delay(self.open, 1)
@@ -476,8 +457,6 @@ class GtjaAlpha(object):
     def gtja102(self):
         return sma(cross_max(self.volume - delay(self.volume, 1), 0), 6) / sma((self.volume - delay(self.volume, 1)).abs(), 6)
 
-    def gtja103(self):
-        return (20 - lowday(self.low, 20) / 20)
 
     def gtja104(self):
         return -1 * delta(correlation(self.high, self.volume, 5), 5) * rank(stddev(self.close, 20))
@@ -491,8 +470,6 @@ class GtjaAlpha(object):
     def gtja107(self):
         return -1 * rank(self.open - delay(self.high, 1)) * rank(self.open - delay(self.close, 1)) * rank(self.open - delay(self.low, 1))
 
-    def gtja108(self):
-        return rank(self.high - ts_min(self.high, 2)) ** rank(correlation(self.vwap), sma(self.volume, 120), 6) * -1
 
     def gtja109(self):
         return sma(self.high - self.low, 10) / sma(sma(self.high - self.low, 10), 10)
@@ -516,9 +493,6 @@ class GtjaAlpha(object):
 
     def gtja113(self):
         return -1 * rank(ts_sum(delay(self.close, 5), 20) / 20) * correlation(self.close, self.volume, 2) * rank(correlation(ts_sum(self.close, 5), ts_sum(self.close, 20), 2))
-
-    def gtja114(self):
-        return rank(delay((self.high - self.low) / ts_sum(self.close, 5) / 5), 2) * rank(rank(self.volume) / (self.high - self.low) / (ts_sum(self.close, 5) / 5) / (self.vwap - self.close))
 
     def gtja115(self):
         return rank(correlation(self.high * 0.9 + self.close * 0.1, sma(self.volume, 30), 10)) ** rank(correlation(ts_rank(self.high * 0.5 + self.low * 0.5, 4), ts_rank(self.volume, 10), 7))
@@ -586,14 +560,8 @@ class GtjaAlpha(object):
     def gtja134(self):
         return (self.close - delay(self.close, 12)) / delay(self.close, 12) * self.volume
 
-    def gtja135(self):
-        return sma(delay(self.close / delay(self.close, 20, 1)), 20)
-
     def gtja136(self):
         return (-1 * rank(delta(self.returns, 3))) * correlation(self.open, self.volume, 10)
-
-    def gtja138(self):
-        return (rank(decay_linear(delta(self.low * 0.7 + self.vwap * 0.3, 3), 20) - ts_rank(decay_linear(ts_rank(correlation(ts_rank(self.low, 8), ts_rank(sma(self.volume, 60), 17), 5), 19), 16), 7)))
 
     def gtja139(self):
         return -1 * correlation(self.open, self.volume, 10)
@@ -607,12 +575,6 @@ class GtjaAlpha(object):
     def gtja142(self):
         return -1 * rank(ts_rank(self.close, 10)) * rank(delta(delta(self.close))) * rank(ts_rank(self.volume / sma(self.volume, 20), 5))
 
-    def gtja143(self):
-        cond = self.close > delay(self.close)
-        alpha = delay(self.alpha143())
-        alpha[cond] = (self.close - delay(self.close)) / \
-            delay(self.close) * self.alpha143()
-        return alpha
 
     def gtja144(self):
         return sumif((self.close / delay(self.close) - 1).abs() / self.amount, 20, self.close < delay(self.close)) / count(self.close < delay(self.close), 20)
@@ -671,9 +633,6 @@ class GtjaAlpha(object):
     def gtja170(self):
         return rank(1.0 / self.close) * self.volume / sma(self.volume, 20) * (self.high *rank(self.high - self.close)) / (ts_sum(self.high, 5) / 5) - rank(self.vwap - delay(self.vwap))
 
-    def gtja171(self):
-        return -1 * (self.low - self.close) * (self.open ** 5) / ((self.close - self.high) ** (self.close ** 5))
-
     def gtja174(self):
         return sumif(stddev(self.close, 20), 20, self.close > delay(self.close)) / 20.0
 
@@ -718,10 +677,6 @@ class GtjaAlpha(object):
     def gtja191(self):
         return correlation(sma(self.volume, 20), self.low, 5) + (self.high * 0.5 + self.low * 0.5 - self.close)
 
-    def worldquant001(self):
-        inner = self.close.copy()
-        inner[self.returns < 0] = stddev(self.returns, 20)
-        return rank(ts_argmax(inner ** 2, 5))
 
     # alpha002:(-1 * correlation(rank(delta(log(volume), 2)), rank(((close -
     # open) / open)), 6))
@@ -731,11 +686,6 @@ class GtjaAlpha(object):
                               rank((self.close - self.open) / self.open), 6)
         return df.replace([-np.inf, np.inf], 0)
 
-    # alpha003:(-1 * correlation(rank(open), rank(volume), 10))
-
-    def worldquant003(self):
-        df = -1 * correlation(rank(self.open), rank(self.volume), 10)
-        return df.replace([-np.inf, np.inf], 0)
 
     # alpha004: (-1 * Ts_Rank(rank(low), 9))
 
@@ -745,22 +695,8 @@ class GtjaAlpha(object):
     def worldquant005(self):
         return rank(self.open - ts_sum(self.vwap, 10) / 10.0) * (-1 * abs(rank(self.close - self.vwap)))
 
-    #  alpha006: (-1 * correlation(open, volume, 10))
 
-    def worldquant006(self):
-        df = -1 * correlation(self.open, self.volume, 10)
-        return df.replace([-np.inf, np.inf], 0)
 
-    # alpha007: ((adv20 < volume) ? ((-1 * ts_rank(abs(delta(close, 7)), 60))
-    # * sign(delta(close, 7))) : (-1* 1))
-
-    def worldquant007(self):
-        adv20 = sma(self.volume, 20)
-        alpha = -1 * ts_rank(abs(delta(self.close, 7)),
-                             60) * sign(delta(self.close, 7))
-        alpha[adv20 >= self.volume] = -1
-        alpha = alpha.replace([-np.inf, np.inf], 0)
-        return alpha
 
     # alpha008: (-1 * rank(((sum(open, 5) * sum(returns, 5)) -
     # delay((sum(open, 5) * sum(returns, 5)),10))))
@@ -799,30 +735,6 @@ class GtjaAlpha(object):
     def worldquant012(self):
         return sign(delta(self.volume, 1)) * (-1 * delta(self.close, 1))
 
-    # alpha013:(-1 * rank(covariance(rank(close), rank(volume), 5)))
-
-    def worldquant013(self):
-        return -1 * rank(covariance(rank(self.close), rank(self.volume), 5))
-
-    # alpha014:((-1 * rank(delta(returns, 3))) * correlation(open, volume,
-    # 10))
-
-    def worldquant014(self):
-        df = correlation(self.open, self.volume, 10)
-        df = df.replace([-np.inf, np.inf], 0)
-        return -1 * rank(delta(self.returns, 3)) * df
-
-    # alpha015:(-1 * sum(rank(correlation(rank(high), rank(volume), 3)), 3))
-
-    def worldquant015(self):
-        df = correlation(rank(self.high), rank(self.volume), 3)
-        df = df.replace([-np.inf, np.inf], 0)
-        return -1 * ts_sum(rank(df), 3)
-
-    #  alpha016:(-1 * rank(covariance(rank(high), rank(volume), 5)))
-
-    def worldquant016(self):
-        return -1 * rank(covariance(rank(self.high), rank(self.volume), 5))
 
     # alpha017: (((-1 * rank(ts_rank(close, 10))) * rank(delta(delta(close,
     # 1), 1))) *rank(ts_rank((volume / adv20), 5)))
@@ -856,36 +768,6 @@ class GtjaAlpha(object):
                      rank(self.open - delay(self.close, 1)) *
                      rank(self.open - delay(self.low, 1)))
 
-    # alpha012: ((((sum(close, 8) / 8) + stddev(close, 8)) < (sum(close, 2) /
-    # 2)) ? (-1 * 1) : (((sum(close,2) / 2) < ((sum(close, 8) / 8) -
-    # stddev(close, 8))) ? 1 : (((1 < (volume / adv20)) || ((volume /adv20) ==
-    # 1)) ? 1 : (-1 * 1))))
-
-    def worldquant021(self):
-        cond_1 = sma(self.close, 8) + \
-            stddev(self.close, 8) < sma(self.close, 2)
-        cond_2 = sma(self.volume, 20) / self.volume < 1
-        alpha = pd.DataFrame(np.ones_like(self.close), index=self.close.index,
-                             columns=self.close.columns)
-        alpha[cond_1 | cond_2] = -1
-        return alpha
-
-    # alpha022:(-1 * (delta(correlation(high, volume, 5), 5) *
-    # rank(stddev(close, 20))))
-
-    def worldquant022(self):
-        df = correlation(self.high, self.volume, 5)
-        df = df.replace([-np.inf, np.inf], 0)
-        return -1 * delta(df, 5) * rank(stddev(self.close, 20))
-
-    # alpha023: (((sum(high, 20) / 20) < high) ? (-1 * delta(high, 2)) : 0)
-
-    def worldquant023(self):
-        cond = sma(self.high, 20) < self.high
-        alpha = pd.DataFrame(np.zeros_like(self.close), index=self.close.index,
-                             columns=self.close.columns)
-        alpha[cond] = -1 * delta(self.high, 2)
-        return alpha
 
     # alpha024: ((((delta((sum(close, 100) / 100), 100) / delay(close, 100)) <
     # 0.05) ||((delta((sum(close, 100) / 100), 100) / delay(close, 100)) ==
@@ -904,11 +786,6 @@ class GtjaAlpha(object):
         df = correlation(ts_rank(self.volume, 5), ts_rank(self.high, 5), 5)
         df = df.replace([-np.inf, np.inf], 0)
         return -1 * ts_max(df, 3)
-
-    def worldquant027(self):
-        alpha = pd.DataFrame(1, index=self.close.index, columns=self.close.columns)
-        cond = rank(ts_sum(correlation(rank(self.volume), rank(self.vwap), 6), 2) / 2.0) > 0.5
-        alpha[cond] = -1
 
 
     # alpha028:scale(((correlation(adv20, low, 5) + ((high + low) / 2)) -
@@ -949,10 +826,6 @@ class GtjaAlpha(object):
                  rank((-1 * delta(self.close, 3)))) + sign(scale(df)))
 
 
-    def worldquant032(self):
-        return scale(sma(self.close) - self.close) + (20 * scale(corrlation(self.vwap, delay(self.close, 5), 230)))
-
-
     # alpha033: rank((-1 * ((1 - (open / close))^1)))
 
     def worldquant033(self):
@@ -987,63 +860,9 @@ class GtjaAlpha(object):
         inner = inner.replace([-np.inf, np.inf], 1).fillna(value=1)
         return -1 * rank(ts_rank(self.open, 10)) * rank(inner)
 
-    # alpha039:((-1 * rank((delta(close, 7) * (1 - rank(decay_linear((volume /
-    # adv20), 9)))))) * (1 +rank(sum(returns, 250))))
-
-    def worldquant039(self):
-        adv20 = sma(self.volume, 20)
-        return ((-1 * rank(delta(self.close,
-                                 7) * (1 - rank(decay_linear(self.volume / adv20,
-                                                             9))))) * (1 + rank(ts_sum(self.returns,
-                                                                                       250))))
-
-    # alpha040: ((-1 * rank(stddev(high, 10))) * correlation(high, volume, 10))
-
-    def worldquant040(self):
-        df = -1 * rank(stddev(self.high, 10)) * \
-            correlation(self.high, self.volume, 10)
-        return df.replace([-np.inf, np.inf], 0)
-
-    def worldquant041(self):
-        return (self.high * self.low) ** 0.5 - self.vwap
 
     def worldquant042(self):
         return rank(self.vwap - self.close) / rank(self.vwap + self.close)
-
-    # alpha43: (ts_rank((volume / adv20), 20) * ts_rank((-1 * delta(close,
-    # 7)), 8))
-
-    def worldquant043(self):
-        adv20 = sma(self.volume, 20)
-        return ts_rank(self.volume / adv20, 20) * \
-            ts_rank((-1 * delta(self.close, 7)), 8)
-
-    # alpha04: (-1 * correlation(high, rank(volume), 5))
-
-    def worldquant044(self):
-        df = correlation(self.high, rank(self.volume), 5)
-        df = df.replace([-np.inf, np.inf], 0)
-        return -1 * df
-
-    # alpha045: (-1 * ((rank((sum(delay(close, 5), 20) / 20)) *
-    # correlation(close, volume, 2)) *rank(correlation(sum(close, 5),
-    # sum(close, 20), 2))))
-
-    def worldquant045(self):
-        df = correlation(self.close, self.volume, 2)
-        df = df.replace([-np.inf, np.inf], 0)
-        return -1 * (rank(sma(delay(self.close, 5), 20)) * df *
-                     rank(correlation(ts_sum(self.close, 5), ts_sum(self.close, 20), 2)))
-
-    # alpha046: ((0.25 < (((delay(close, 20) - delay(close, 10)) / 10) - ((del
-
-    def worldquant046(self):
-        inner = (((delay(self.close, 20) - delay(self.close, 10)) /
-                  10) - ((delay(self.close, 10) - self.close) / 10)).copy()
-        alpha = (-1 * delta(self.close))
-        alpha[inner < 0] = 1
-        alpha[inner > 0.25] = -1
-        return alpha
 
 
 
@@ -1058,16 +877,6 @@ class GtjaAlpha(object):
         alpha[inner < -0.1] = 1
         return alpha
 
-    # alpha051:(((((delay(close, 20) - delay(close, 10)) / 10) -
-    # ((delay(close, 10) - close) / 10)) < (-1 *0.05)) ? 1 : ((-1 * 1) *
-    # (close - delay(close, 1))))
-
-    def worldquant051(self):
-        inner = ((((delay(self.close, 20) - delay(self.close, 10)) /
-                   10) - ((delay(self.close, 10) - self.close) / 10))).copy()
-        alpha = (-1 * delta(self.close))
-        alpha[inner < -0.05] = 1
-        return alpha
 
     def worldquant052(self):
         return (-1 * ts_min(self.low, 5) + delay(ts_min(self.low, 5), 5) * rank(ts_sum(self.returns, 240) / 20.0 - ts_sum(self.returns, 20) / 20.0)) * ts_rank(self.volume, 5)

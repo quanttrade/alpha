@@ -111,7 +111,8 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return, resid_re
             resid_ret[index] = np.nan
 
     resid_ret.ix[date] = resid_returns
-
+    resid_ret.index = pd.DatetimeIndex(resid_ret.index)
+    resid_ret = resid_ret.sort_index()
     resid_ret.to_hdf('E:\multi_factor\\basic_factor\\resid_return.h5', 'table')
 
 
@@ -135,7 +136,7 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return, resid_re
 
     pn_data['CMRA'] = cmra
 
-    Lambda_60=np.power(0.5, 1 / 60.0)
+    Lambda_60=np.power(0.5, 1 / 63.0)
     weight_60=np.array([Lambda_60 ** (251 - i) for i in range(252)])
     resid = resid_ret.ix[-253:]
     hsigma = resid.rolling(252).apply(
@@ -152,9 +153,12 @@ def create_daily_barra_factor(fundmental, price_data, benchmark_return, resid_re
     momentum_252 = pd.Series(np.average(np.log(adjclose[-253 - 21:].pct_change()[1:-21] + 1), weights=weight_252,axis=0), index=fundmental.index)
     momentum = momentum_504.fillna(value=momentum_252)
 
-    pn_data['RSTR'] = momentum
 
-    industry_stock = pd.Series(w.wss(list(pn_data.index), "industry2","industryType=1;industryStandard=1;tradeDate=%s" % date).Data[0], index=pn_data.index)
+    pn_data['RSTR'] = momentum
+    industry_data = w.wsd(list(pn_data.index), "industry_citic", date, date, "industryType=1")
+    if industry_data.ErrorCode != 0:
+        industry_data = w.wss(list(pn_data.index), "industry_citic","tradeDate=%s;industryType=1" % date)
+    industry_stock = pd.Series(industry_data.Data[0], index=industry_data.Codes)
     pn_data[u'行业'] = industry_stock
 
     pn_data_fill = pn_data.groupby(u'行业').apply(lambda x: x.fillna(x.quantile()))
@@ -289,12 +293,15 @@ def get_basic_data(date, length, method='hdf'):
 
 if __name__ == '__main__':
     dt = datetime.now()
-    if dt.hour < 16:
+    if dt.hour < 20:
         date_before = w.tdaysoffset(-1, dt).Data[0][0]
         date_before =  ''.join(str(date_before).split(' ')[0].split('-'))
         dt = date_before
     date_list = map(lambda x: x.split('.')[0], os.listdir('E:/multi_factor/barra_factor'))
-    last_date = max(date_list)
+    if not date_list:
+        last_date = '20070331'
+    else:
+        last_date = max(date_list)
     tradedate = w.tdays(last_date, dt).Data[0]
     tradedate =  map(lambda x:''.join(str(x).split(' ')[0].split('-')), tradedate)
     length = 540

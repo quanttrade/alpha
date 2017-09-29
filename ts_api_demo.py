@@ -235,12 +235,18 @@ def get_minute_bar(date):
 	r = pd.DataFrame(TSResult(data))
 	return r
 
+def get_adjprice(date):
+	data = TSLPy2.RemoteCallFunc("get_adjprice",[date],{})
+	r = pd.DataFrame(TSResult(data))
+	return r
+
 
 
 #y8 = get_intraday_prices('沪深300',20161101,20161130,'30分钟线')
 #import pdb;pdb.set_trace()
 
-
+"""
 if __name__=='__main__':
 	px =get_minute_bar(20070131)
 	import pdb;pdb.set_trace()
+"""

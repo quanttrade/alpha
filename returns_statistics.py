@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 
 def maxdrawdown(net_value):
+    if net_value.shape[0] == 1:
+        net_value = net_value.T
     draw_down = pd.Series([(net_value.iloc[:i + 1].max() - net_value.iloc[i]) / net_value.iloc[:i].max() for i in range(len(net_value) - 1)], index=net_value.index[:-1])
 
     maxdrawdown_value = draw_down.max()
@@ -14,11 +16,18 @@ def maxdrawdown(net_value):
 
 
 def volatility(net_value):
+    if net_value.shape[0] == 1:
+        net_value = net_value.T
     return net_value.pct_change().std() * np.sqrt(252.0)
 
 
 def returns_(netvalue):
     return netvalue.iloc[-1] / netvalue.iloc[0] - 1
+
+def returns_total(netvalue):
+    if netvalue.shape[0] == 1:
+        netvalue = netvalue.T
+    return np.power(netvalue.iloc[-1] / netvalue.iloc[0], 242.0 / netvalue.shape[0]) - 1
 
 def statistics(netvalue):
     netvalue = netvalue.dropna()

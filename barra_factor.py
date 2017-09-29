@@ -304,7 +304,7 @@ def industry_factor(hangye_class):
 def caculate_factor_returns(barra_factor,  price_data, period):
 
     volume = price_data['volume']
-    returns = price_data['adjclose'].pct_change(period).shift(-period)
+    returns = price_data['adjopen'].pct_change(period).shift(-period - 1)
     cap = price_data['close'] * price_data['total_shares']
     barra_factor.index = barra_factor.index.rename(['date', 'asset'])
 
@@ -325,7 +325,7 @@ def caculate_factor_returns(barra_factor,  price_data, period):
 
     industry_all = barra_factor.columns[10:43]
 
-    for date in tradedate[:-period]:
+    for date in tradedate[:-period - 1]:
 
         print date
 

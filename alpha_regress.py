@@ -8,8 +8,7 @@ import numpy as np
 def alpha_delete(alpha_corr, alpha_IR, corr_limit, ir_limit, period):
     alpha_corr_abs = alpha_corr.abs()
     alpha_list = alpha_corr_abs.columns
-    alpha_IR_period = alpha_IR.ix[period][
-        ['Ann. IR', 'alpha_name']].set_index('alpha_name')['Ann. IR'].abs()
+    alpha_IR_period = alpha_IR
 
     for alpha_i in alpha_list:
         for alpha_j in alpha_list:
@@ -106,6 +105,8 @@ def factor_information_coefficient_statistics(ic):
     ic_summary_table["Ann. IR"] = (
         ic.mean() / ic.std()) * np.sqrt(252)
 
+    return ic_summary_table
+
 
 def stock_weight(
         bench_weight,
@@ -173,12 +174,14 @@ def stock_weight(
     else:
         w_last = pd.Series(np.repeat(0.0, N), index=risk_factor.index)
         stock_t = list(set(w_last.index) & set(w_old.index))
-        w_last.ix[stock_t] = w_old.ix[stock_t]
+        for stk in stock_t:
+            w_last.ix[stk] = w_old.ix[stk]
         untrade_stock = list(set(w_old.index) - set(w_last.index))
         for stock in untrade_stock:
             untrade_weight += w_old[stock]
         w_last = w_last.values
 
+    print untrade_weight
     # define the object to solve
     ret = alpha_loading.T * alpha_returns_t.values - \
         TC * sum_entries(abs(w - w_last)) / 2.0
@@ -186,7 +189,7 @@ def stock_weight(
     constraints = [
         0 <= w,
         w <= weight_bound,
-        sum_entries(w) == 1,
+        sum_entries(w) == 1 - untrade_weight,
         abs(
             potofolio_risk_loading -
             bench_risk_loading) < risk_loading_bound,
@@ -198,13 +201,16 @@ def stock_weight(
     try:
         Maximize_value = prob.solve()
         weight = np.array(w.value)
+        print weight
         weight = pd.Series([weight[i][0] for i in range(
-            len(weight))], index=risk_factor.index) * (1 - untrade_weight)
+            len(weight))], index=risk_factor.index)
     except Exception as e:
         print e
         weight = w_old
         if isinstance(weight,float) and weight == 0.0:
             return pd.Series(0.0, index=risk_factor.index)
+        else:
+            return weight
 
     if untrade_stock:
         for stock in untrade_stock:
@@ -232,8 +238,8 @@ def alpha_model_backtest(
     volume = price_data['volume']
     returns = price_data['adjclose'].pct_change()
     cap = price_data['close'] * price_data['total_shares']
-    gap_ret =price_data['adjopen'] / price_data['adjclose'].shift(1) - 1
-    day_ret = price_data['adjclose'] / price_data['adjopen'] - 1
+    gap_ret =price_data['adjopen_vwap'] / price_data['adjclose'].shift(1) - 1
+    day_ret = price_data['adjclose'] / price_data['adjopen_vwap'] - 1
     barra_factor.index = barra_factor.index.rename(['date', 'asset'])
 
     tradedate = barra_factor.index.get_level_values('date')
@@ -259,10 +265,11 @@ def alpha_model_backtest(
             weight_dict[date] = now_weight
             returns_t = returns.ix[date]
             if not now_weight.empty:
-                now_weight_date = now_weight * (1 + day_ret.ix[yesterday].ix[now_weight.index])
-                now_weight = now_weight_date / now_weight_date.sum()
                 day_return.ix[date] = now_weight.dot(
                     returns_t.ix[now_weight.index])
+                #now_weight_date = now_weight * (1 + returns.ix[date].ix[now_weight.index])
+                #now_weight = now_weight_date / now_weight_date.sum()
+                #weight_dict[date] = now_weight
             else:
                 day_return.ix[date] = 0.0
         else:
@@ -286,6 +293,7 @@ def alpha_model_backtest(
 
             else:
                 w_old = now_weight.copy()
+
 
             #alpha_ic_t = np.average(alpha_ic.ix[:date][-window - 1 - period:-period - 1].astype(float), weights=decay_weight, axis=0)
             #alpha_ic_t = np.abs(alpha_ic_t)
@@ -334,7 +342,7 @@ def alpha_model_backtest(
                 day_return.ix[date] = - TC * \
                     (now_weight - w_last).abs().sum() / 2.0
             else:
-                
+
                 day_return.ix[date] = (w_last.dot(
                     gap_ret.ix[date].ix[w_last.index]) + 1) * (now_weight.dot(day_ret.ix[date].ix[now_weight.index]) + 1) * (1 - TC * (now_weight - w_last).abs().sum() / 2.0) -1
                 """
@@ -342,6 +350,9 @@ def alpha_model_backtest(
                     gap_ret.ix[date].ix[now_weight.index]) + 1) * (1 - TC * (now_weight - w_last).abs().sum() / 2.0) -1
                 """
             print "coost %f" % (TC / 2.0 * (now_weight - w_last).abs().sum())
+            #now_weight_date = now_weight * (1 + day_ret.ix[date].ix[now_weight.index])
+            #now_weight = now_weight_date / now_weight_date.sum()
+            weight_dict[date] = now_weight
 
     weight = pd.DataFrame(weight_dict).T.stack()
     weight.index = weight.index.rename(['date', 'asset'])
@@ -354,23 +365,30 @@ if __name__ == '__main__':
     barra_factor = pd.read_hdf(
         'D:data/daily_data/barra_factor_cap.h5',
         'barra_factor')
-    price_data = pd.read_hdf('D:\data\daily_data\\price_data.h5', 'table')
-    periods = [1, 2, 3, 4, 5, 10, 20]
+    price_data = dict(pd.read_hdf('D:\data\daily_data\\price_data.h5', 'table'))
+    for s in price_data.keys():
+        price_data[s] = price_data[s].ix[:'20170706']
+    periods = [2, 3, 5]
+
     forward_returns = compute_forward_pure_returns(
         barra_factor, price_data, periods)
-    forward_returns.to_hdf('D:\data\daily_data\\forward_returns.h5', 'table')
+    forward_returns.to_hdf('D:\data\daily_data\\forward_returns_open.h5', 'table')
+
+    #forward_returns = pd.read_hdf('D:\data\daily_data\\forward_returns_open.h5', 'table')
 
     for alpha_name in alpha_dir:
-        print alpha_name
+
         try:
-            path = os.path.join(gtja_path, alpha_name, )
+            path = os.path.join(gtja_path, alpha_name)
             neutralized_factor = pd.read_hdf(
                 path + '\\neutralize_factor.h5', 'table')
             adjusted_ic = caculate_adjusted_IC(
-                neutralized_factor.stack(), forward_returns)
+                neutralized_factor.stack(), forward_returns.dropna())
             ic_summary_table = factor_information_coefficient_statistics(
-                adjusted_ic)
-            ic_summary_table.to_excel(path + '\\adjusted_ic_summary.xlsx')
+                adjusted_ic.dropna())
+            ic_summary_table.to_excel(path + '\\adjusted_ic_summary_open.xlsx')
+            print alpha_name
+            print ic_summary_table
 
         except Exception as e:
             print e
